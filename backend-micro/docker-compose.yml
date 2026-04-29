@@ -1,0 +1,68 @@
+﻿services:
+  postgres-micro:
+    image: postgres:16
+    container_name: mercadolocal-postgres-micro
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: mercado_micro
+      POSTGRES_USER: mercadolocal
+      POSTGRES_PASSWORD: mercadolocal
+    ports:
+      - '5434:5432'
+    volumes:
+      - postgres_micro_data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: mercadolocal-rabbitmq
+    restart: unless-stopped
+    ports:
+      - '5673:5672'
+      - '15673:15672'
+
+  clientes-service:
+    build: ./clientes-service
+    container_name: mercadolocal-clientes-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres-micro
+      DB_PORT: 5432
+      DB_NAME: mercado_micro
+      DB_USER: mercadolocal
+      DB_PASSWORD: mercadolocal
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: guest
+      RABBIT_PASSWORD: guest
+      CLIENTES_EVENTS_QUEUE: CLIENTES_EVENTS
+    depends_on:
+      - postgres-micro
+      - rabbitmq
+    ports:
+      - '8001:8001'
+
+  pedidos-service:
+    build: ./pedidos-service
+    container_name: mercadolocal-pedidos-service
+    restart: unless-stopped
+    environment:
+      DB_HOST: postgres-micro
+      DB_PORT: 5432
+      DB_NAME: mercado_micro
+      DB_USER: mercadolocal
+      DB_PASSWORD: mercadolocal
+      CLIENTES_SERVICE_URL: http://clientes-service:8001
+      RABBIT_HOST: rabbitmq
+      RABBIT_PORT: 5672
+      RABBIT_USER: guest
+      RABBIT_PASSWORD: guest
+      PEDIDOS_EVENTS_QUEUE: PEDIDOS_EVENTS
+    depends_on:
+      - postgres-micro
+      - rabbitmq
+      - clientes-service
+    ports:
+      - '8002:8002'
+
+volumes:
+  postgres_micro_data:

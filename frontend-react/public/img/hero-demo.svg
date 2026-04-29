@@ -1,0 +1,14 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="fondo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F4F1DE" />
+      <stop offset="100%" stop-color="#EAE0D5" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#fondo)"/>
+  <circle cx="220" cy="170" r="80" fill="#D97757" opacity="0.2"/>
+  <circle cx="610" cy="420" r="110" fill="#81B29A" opacity="0.18"/>
+  <rect x="160" y="250" width="480" height="110" rx="24" fill="#FFFFFF" opacity="0.9"/>
+  <text x="400" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" fill="#2D3142">MercadoLocal</text>
+  <text x="400" y="338" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="#4F5D75">Vista demo local sin dependencias externas</text>
+</svg>

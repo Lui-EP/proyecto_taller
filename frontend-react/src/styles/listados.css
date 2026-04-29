@@ -1,0 +1,40 @@
+/* ========================================
+   FAVORITOS / HISTORIAL
+======================================== */
+
+.list-page-main {
+    padding: var(--spacing-xl) 0;
+    min-height: calc(100vh - 200px);
+}
+
+.list-page-subtitle {
+    color: var(--charcoal-muted);
+}
+
+.list-grid {
+    margin-top: var(--spacing-xl);
+}
+
+.history-meta {
+    font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+    .list-page-main {
+        padding: var(--spacing-lg) 0;
+    }
+
+    .list-page-subtitle {
+        font-size: 0.92rem;
+    }
+}
+
+@media (max-width: 540px) {
+    .list-page-main {
+        padding: var(--spacing-md) 0;
+    }
+
+    .list-grid {
+        margin-top: var(--spacing-md);
+    }
+}

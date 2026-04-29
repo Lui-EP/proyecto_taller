@@ -1,0 +1,2 @@
+-r clientes-service/requirements.txt
+-r pedidos-service/requirements.txt

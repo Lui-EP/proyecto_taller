@@ -1,0 +1,218 @@
+/* ========================================
+   AUTH PAGES (LOGIN & REGISTER)
+======================================== */
+
+.auth-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xl);
+    background-color: var(--cream);
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 440px;
+    margin: 0 auto;
+}
+
+.auth-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    color: var(--charcoal-light);
+    margin-bottom: var(--spacing-xl);
+    transition: color 0.3s ease;
+}
+
+.auth-back-link:hover {
+    color: var(--terracotta);
+}
+
+.auth-card {
+    background-color: var(--white);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--sand);
+    box-shadow: var(--shadow-card);
+    overflow: hidden;
+}
+
+.auth-header {
+    text-align: center;
+    padding: var(--spacing-xl) var(--spacing-xl) var(--spacing-md);
+}
+
+.auth-logo {
+    width: 64px;
+    height: 64px;
+    background-color: var(--terracotta);
+    border-radius: var(--radius-full);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto var(--spacing-md);
+    color: var(--white);
+    font-size: 1.5rem;
+}
+
+.auth-title {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-xs);
+}
+
+.auth-subtitle {
+    color: var(--charcoal-muted);
+}
+
+.auth-body {
+    padding: var(--spacing-md) var(--spacing-xl) var(--spacing-xl);
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* Role Selection */
+.role-selection {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+}
+
+.role-option {
+    position: relative;
+}
+
+.role-option input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.role-option-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-md);
+    border: 2px solid var(--sand);
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    min-height: 130px;
+}
+
+.role-option input:checked + .role-option-content {
+    border-color: var(--terracotta);
+    background-color: rgba(217, 119, 87, 0.05);
+}
+
+.role-option-content:hover {
+    border-color: var(--terracotta);
+}
+
+.role-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--spacing-sm);
+    font-size: 1.25rem;
+}
+
+.role-icon.buyer {
+    background-color: rgba(217, 119, 87, 0.1);
+    color: var(--terracotta);
+}
+
+.role-icon.seller {
+    background-color: rgba(129, 178, 154, 0.1);
+    color: var(--sage);
+}
+
+.role-title {
+    font-weight: 600;
+    margin-bottom: var(--spacing-xs);
+}
+
+.role-subtitle {
+    font-size: 0.75rem;
+    color: var(--charcoal-muted);
+}
+
+/* Password Input */
+.password-input-container {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: var(--spacing-md);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--charcoal-muted);
+    padding: var(--spacing-xs);
+}
+
+.password-toggle:hover {
+    color: var(--charcoal);
+}
+
+/* Auth Footer */
+.auth-footer {
+    text-align: center;
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--sand);
+}
+
+.auth-footer p {
+    color: var(--charcoal-muted);
+}
+
+.auth-footer a {
+    color: var(--terracotta);
+    font-weight: 500;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .auth-page {
+        padding: var(--spacing-md);
+    }
+    
+    .auth-header,
+    .auth-body {
+        padding: var(--spacing-md);
+    }
+    
+    .role-selection {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 380px) {
+    .auth-title {
+        font-size: 1.3rem;
+    }
+
+    .auth-subtitle {
+        font-size: 0.88rem;
+    }
+
+    .auth-body .form-input {
+        font-size: 0.9rem;
+    }
+}

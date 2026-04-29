@@ -1,0 +1,34 @@
+# Root ignores
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Env files
+.env
+.env.*
+*.local
+
+# Logs
+*.log
+
+# Node
+**/node_modules/
+**/dist/
+**/build/
+
+# Python
+**/__pycache__/
+**/*.pyc
+**/.venv/
+
+# Expo / React Native
+**/.expo/
+**/.logs/
+**/android/
+**/ios/
+
+# Uploads or temporary
+backend/uploads/
