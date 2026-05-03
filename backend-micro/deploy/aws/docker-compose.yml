@@ -1,0 +1,100 @@
+services:
+  postgres-micro:
+    image: postgres:16
+    container_name: mercadolocal-postgres-micro
+    restart: unless-stopped
+    env_file:
+      - ./.env.postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_micro_data:/var/lib/postgresql/data
+      - ../../sql/crear_bd.sql:/docker-entrypoint-initdb.d/01-crear_bd.sql:ro
+    networks:
+      - mercadolocal-net
+
+  clientes-service:
+    build:
+      context: ../../clientes-service
+    container_name: mercadolocal-clientes-service
+    restart: unless-stopped
+    env_file:
+      - ./.env.clientes
+    depends_on:
+      - postgres-micro
+    networks:
+      - mercadolocal-net
+
+  pedidos-service:
+    build:
+      context: ../../pedidos-service
+    container_name: mercadolocal-pedidos-service
+    restart: unless-stopped
+    env_file:
+      - ./.env.pedidos
+    depends_on:
+      - postgres-micro
+      - clientes-service
+    networks:
+      - mercadolocal-net
+
+  repartidores-service:
+    build:
+      context: ../../repartidores-service
+    container_name: mercadolocal-repartidores-service
+    restart: unless-stopped
+    env_file:
+      - ./.env.repartidores
+    depends_on:
+      - postgres-micro
+    networks:
+      - mercadolocal-net
+
+  vendedores-service:
+    build:
+      context: ../../vendedores-service
+    container_name: mercadolocal-vendedores-service
+    restart: unless-stopped
+    env_file:
+      - ./.env.vendedores
+    depends_on:
+      - postgres-micro
+    networks:
+      - mercadolocal-net
+
+  productos-service:
+    build:
+      context: ../../productos-service
+    container_name: mercadolocal-productos-service
+    restart: unless-stopped
+    env_file:
+      - ./.env.productos
+    depends_on:
+      - postgres-micro
+    networks:
+      - mercadolocal-net
+
+  api-gateway:
+    build:
+      context: ../../api-gateway
+    container_name: mercadolocal-api-gateway
+    restart: unless-stopped
+    env_file:
+      - ./.env.gateway
+    depends_on:
+      - clientes-service
+      - pedidos-service
+      - repartidores-service
+      - vendedores-service
+      - productos-service
+    ports:
+      - "8010:8010"
+    networks:
+      - mercadolocal-net
+
+volumes:
+  postgres_micro_data:
+
+networks:
+  mercadolocal-net:
+    driver: bridge
