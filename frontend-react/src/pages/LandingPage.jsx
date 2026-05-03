@@ -41,7 +41,8 @@ const highlights = [
 
 export default function LandingPage() {
     const apiBaseUrl = String(import.meta.env.VITE_API_URL || 'https://mercado-local.ddns.net').trim();
-    const exploreUrl = apiBaseUrl || 'https://mercado-local.ddns.net';
+    const healthUrl = `${apiBaseUrl || 'https://mercado-local.ddns.net'}/health`;
+    const appUrl = '/inicio';
 
     return (
         <main className="min-h-screen overflow-hidden bg-gradient-to-b from-[#FBF5EA] via-[#F7EEDC] to-[#EEDFC5] text-[#4B3217]">
@@ -63,12 +64,18 @@ export default function LandingPage() {
 
                         <div className="mt-8 flex flex-wrap items-center gap-4">
                             <a
-                                href={exploreUrl}
-                                target="_blank"
-                                rel="noreferrer"
+                                href={appUrl}
                                 className="inline-flex items-center justify-center rounded-2xl bg-[#A86A2A] px-8 py-4 text-base font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8D571F] hover:shadow-[0_14px_28px_-12px_rgba(141,87,31,0.65)] focus:outline-none focus:ring-2 focus:ring-[#D9BE94]"
                             >
-                                Explorar Plataforma
+                                Ir a la App
+                            </a>
+                            <a
+                                href={healthUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center justify-center rounded-2xl border border-[#A86A2A] bg-white px-8 py-4 text-base font-bold text-[#A86A2A] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#F8F1E3] focus:outline-none focus:ring-2 focus:ring-[#D9BE94]"
+                            >
+                                Ver API Health
                             </a>
                             <span className="rounded-xl border border-[#E7D2AE] bg-[#FCF7EC] px-4 py-2 text-sm text-[#8C6840]">
                                 Endpoint activo: <strong className="text-[#6B4A27]">{apiBaseUrl}</strong>
