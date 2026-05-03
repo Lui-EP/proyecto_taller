@@ -1,17 +1,17 @@
-﻿services:
+services:
   postgres:
     image: postgres:16
-    container_name: mercadolocal-postgres
+    container_name: mercadolocal-postgres-micro-root
     restart: unless-stopped
     environment:
-      POSTGRES_DB: mercadolocal
-      POSTGRES_USER: mercadolocal
-      POSTGRES_PASSWORD: mercadolocal
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pERSONAL04
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/sql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./backend-micro/sql/crear_bd.sql:/docker-entrypoint-initdb.d/01-crear_bd.sql:ro
 
 volumes:
   postgres_data:

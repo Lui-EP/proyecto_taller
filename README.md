@@ -2,10 +2,9 @@
 
 Proyecto completo con:
 
-- `backend-micro/` -> backend principal (FastAPI, 5 microservicios)
+- `backend-micro/` -> backend principal (FastAPI, API Gateway y 5 microservicios)
 - `frontend-react/` -> app web (React + Vite)
 - `frontend-native/` -> app movil (React Native + Expo)
-- `backend/` -> backend legacy (Node, solo referencia)
 
 ## Orden recomendado para levantar todo
 
