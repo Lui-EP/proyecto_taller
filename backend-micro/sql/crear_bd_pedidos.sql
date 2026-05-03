@@ -1,3 +1,1 @@
--- Base para pedidos-service
-
-CREATE DATABASE bd_proypedidos;
+CREATE DATABASE bd_pedidos_ms;

@@ -1,8 +1,13 @@
-﻿const rawClientesApi = `${process.env.EXPO_PUBLIC_CLIENTES_API_URL || ''}`.trim();
+﻿import { buildAuthHeaders } from './httpAuth';
+
+const rawClientesApi = `${process.env.EXPO_PUBLIC_CLIENTES_API_URL || ''}`.trim();
 
 export function getClientesApiBaseUrl() {
   if (!rawClientesApi) {
     throw new Error('Falta EXPO_PUBLIC_CLIENTES_API_URL en frontend-native/.env.local');
+  }
+  if (rawClientesApi.includes('tu-dominio.com')) {
+    throw new Error('Configura EXPO_PUBLIC_CLIENTES_API_URL con tu URL real de backend');
   }
   return rawClientesApi.replace(/\/$/, '');
 }
@@ -13,7 +18,7 @@ async function request(path, options = {}) {
     response = await fetch(`${getClientesApiBaseUrl()}${path}`, {
       headers: {
         'Content-Type': 'application/json',
-        ...(options.headers || {}),
+        ...buildAuthHeaders(options.headers || {}),
       },
       ...options,
     });
@@ -39,6 +44,11 @@ export async function listProducts(params = {}) {
   return json.products || [];
 }
 
+export async function listCategories() {
+  const json = await request('/categorias');
+  return json.categories || [];
+}
+
 export async function createProduct(payload) {
   const json = await request('/productos', {
     method: 'POST',
@@ -54,3 +64,44 @@ export async function updateProduct(productId, payload) {
   });
   return json.product;
 }
+
+export async function getCart(ownerId) {
+  const json = await request(`/cart?owner_id=${encodeURIComponent(ownerId)}`);
+  return json;
+}
+
+export async function addCartItem(ownerId, productId, quantity) {
+  const json = await request(
+    `/cart/items?owner_id=${encodeURIComponent(ownerId)}&product_id=${encodeURIComponent(productId)}&quantity=${encodeURIComponent(Number(quantity || 1))}`,
+    { method: 'POST' }
+  );
+  return json;
+}
+
+export async function updateCartItem(ownerId, productId, quantity) {
+  const json = await request(
+    `/cart/items/${encodeURIComponent(productId)}?owner_id=${encodeURIComponent(ownerId)}&quantity=${encodeURIComponent(Number(quantity || 1))}`,
+    { method: 'PUT' }
+  );
+  return json;
+}
+
+export async function removeCartItem(ownerId, productId) {
+  const json = await request(
+    `/cart/items/${encodeURIComponent(productId)}?owner_id=${encodeURIComponent(ownerId)}`,
+    { method: 'DELETE' }
+  );
+  return json;
+}
+
+export async function clearCartItems(ownerId) {
+  const json = await request(`/cart?owner_id=${encodeURIComponent(ownerId)}`, { method: 'DELETE' });
+  return json;
+}
+
+export async function listSellerActiveCarts(sellerId) {
+  const json = await request(`/seller/carts/active?seller_id=${encodeURIComponent(sellerId)}`);
+  return json.carts || [];
+}
+
+

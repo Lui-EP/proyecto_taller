@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Generator
 
 from dotenv import load_dotenv
+from passlib.hash import pbkdf2_sha256
 from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, Text, create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -12,7 +13,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 load_dotenv()
 
 pg_config = {
-    'dbname': os.getenv('POSTGRES_DB', 'bd_proyclientes'),
+    'dbname': os.getenv('POSTGRES_DB', 'bd_clientes_ms'),
     'user': os.getenv('POSTGRES_USER', 'postgres'),
     'password': os.getenv('POSTGRES_PASSWORD', 'pERSONAL04'),
     'host': os.getenv('POSTGRES_HOST', '127.0.0.1'),
@@ -30,21 +31,27 @@ else:
         f"@{pg_config['host']}:{pg_config['port']}/{pg_config['dbname']}"
     )
 
+
+pg_sslmode = os.getenv('POSTGRES_SSLMODE', 'disable').strip().lower()
+if pg_sslmode and pg_sslmode != 'disable':
+    DATABASE_URL = '{}?sslmode={}'.format(DATABASE_URL, pg_sslmode)
+
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 Base = declarative_base()
+PASSWORD_HASH_ROUNDS = int(os.getenv('PASSWORD_HASH_ROUNDS', '29000'))
 
 PRODUCTOS_SEED = [
     {
         'producto_id': 'p-1',
-        'seller_id': 'seller-1',
+        'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
         'nombre': 'Canastas de palma',
         'categoria': 'artesanias',
-        'categoria_label': 'Artesanías',
+        'categoria_label': 'ArtesanÃ­as',
         'precio': 450,
         'stock': 18,
-        'descripcion': 'Canastas tejidas a mano para cocina, regalo o decoración.',
+        'descripcion': 'Canastas tejidas a mano para cocina, regalo o decoraciÃ³n.',
         'featured': True,
         'local': True,
         'verified': True,
@@ -54,9 +61,9 @@ PRODUCTOS_SEED = [
     },
     {
         'producto_id': 'p-2',
-        'seller_id': 'seller-1',
+        'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
-        'nombre': 'Miel orgánica',
+        'nombre': 'Miel orgÃ¡nica',
         'categoria': 'alimentos',
         'categoria_label': 'Alimentos',
         'precio': 220,
@@ -71,7 +78,7 @@ PRODUCTOS_SEED = [
     },
     {
         'producto_id': 'p-3',
-        'seller_id': 'seller-1',
+        'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
         'nombre': 'Bolsa textil',
         'categoria': 'textiles',
@@ -88,14 +95,14 @@ PRODUCTOS_SEED = [
     },
     {
         'producto_id': 'p-4',
-        'seller_id': 'seller-1',
+        'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
-        'nombre': 'Café molido artesanal',
+        'nombre': 'CafÃ© molido artesanal',
         'categoria': 'alimentos',
         'categoria_label': 'Alimentos',
         'precio': 190,
         'stock': 26,
-        'descripcion': 'Café de tueste medio con aroma intenso y notas dulces.',
+        'descripcion': 'CafÃ© de tueste medio con aroma intenso y notas dulces.',
         'featured': True,
         'local': True,
         'verified': True,
@@ -105,11 +112,11 @@ PRODUCTOS_SEED = [
     },
     {
         'producto_id': 'p-5',
-        'seller_id': 'seller-1',
+        'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
         'nombre': 'Jarro de barro',
         'categoria': 'artesanias',
-        'categoria_label': 'Artesanías',
+        'categoria_label': 'ArtesanÃ­as',
         'precio': 520,
         'stock': 14,
         'descripcion': 'Pieza de barro decorada a mano para servir bebidas o adornar.',
@@ -122,11 +129,11 @@ PRODUCTOS_SEED = [
     },
     {
         'producto_id': 'p-6',
-        'seller_id': 'seller-1',
+        'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
-        'nombre': 'Molcajete volcánico',
+        'nombre': 'Molcajete volcÃ¡nico',
         'categoria': 'artesanias',
-        'categoria_label': 'Artesanías',
+        'categoria_label': 'ArtesanÃ­as',
         'precio': 640,
         'stock': 6,
         'descripcion': 'Molcajete de piedra listo para salsas y cocina tradicional.',
@@ -139,14 +146,14 @@ PRODUCTOS_SEED = [
     },
     {
         'producto_id': 'p-7',
-        'seller_id': 'seller-1',
+        'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
-        'nombre': 'Pulsera de ámbar',
+        'nombre': 'Pulsera de Ã¡mbar',
         'categoria': 'joyeria',
-        'categoria_label': 'Joyería',
+        'categoria_label': 'JoyerÃ­a',
         'precio': 310,
         'stock': 12,
-        'descripcion': 'Pulsera ajustable con cuentas de ámbar natural.',
+        'descripcion': 'Pulsera ajustable con cuentas de Ã¡mbar natural.',
         'featured': True,
         'local': True,
         'verified': True,
@@ -156,14 +163,14 @@ PRODUCTOS_SEED = [
     },
     {
         'producto_id': 'p-8',
-        'seller_id': 'seller-1',
+        'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
         'nombre': 'Rebozo de telar',
         'categoria': 'textiles',
         'categoria_label': 'Textiles',
         'precio': 760,
         'stock': 6,
-        'descripcion': 'Rebozo tejido con detalle tradicional y caída suave.',
+        'descripcion': 'Rebozo tejido con detalle tradicional y caÃ­da suave.',
         'featured': True,
         'local': True,
         'verified': True,
@@ -173,11 +180,11 @@ PRODUCTOS_SEED = [
     },
     {
         'producto_id': 'p-9',
-        'seller_id': 'seller-1',
+        'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
         'nombre': 'Sombrero charro',
         'categoria': 'artesanias',
-        'categoria_label': 'Artesanías',
+        'categoria_label': 'ArtesanÃ­as',
         'precio': 480,
         'stock': 11,
         'descripcion': 'Sombrero decorativo y festivo con bordado charro.',
@@ -190,14 +197,14 @@ PRODUCTOS_SEED = [
     },
     {
         'producto_id': 'p-10',
-        'seller_id': 'seller-1',
+        'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
         'nombre': 'Tazas de arcilla',
         'categoria': 'artesanias',
-        'categoria_label': 'Artesanías',
+        'categoria_label': 'ArtesanÃ­as',
         'precio': 340,
         'stock': 19,
-        'descripcion': 'Juego de tazas pintadas a mano con inspiración tradicional.',
+        'descripcion': 'Juego de tazas pintadas a mano con inspiraciÃ³n tradicional.',
         'featured': True,
         'local': True,
         'verified': True,
@@ -209,33 +216,33 @@ PRODUCTOS_SEED = [
 
 USUARIOS_APP_SEED = [
     {
-        'usuario_id': 'buyer-1',
+        'usuario_id': 'comprador-1',
         'nombre': 'Cliente Demo',
         'email': 'cliente@mercadolocal.mx',
         'password': '123456',
         'role': 'buyer',
         'telefono': '9610000000',
-        'direccion': 'Tuxtla Gutiérrez, Chiapas',
+        'direccion': 'Tuxtla GutiÃ©rrez, Chiapas',
         'activo': True,
     },
     {
-        'usuario_id': 'seller-1',
+        'usuario_id': 'vendedor-1',
         'nombre': 'Artesana Luna',
         'email': 'vendedor@mercadolocal.mx',
         'password': '123456',
         'role': 'seller',
         'telefono': '9611111111',
-        'direccion': 'Tuxtla Gutiérrez, Chiapas',
+        'direccion': 'Tuxtla GutiÃ©rrez, Chiapas',
         'activo': True,
     },
     {
-        'usuario_id': 'courier-1',
+        'usuario_id': 'repartidor-1',
         'nombre': 'Repartidor Demo',
         'email': 'repartidor@mercadolocal.mx',
         'password': '123456',
         'role': 'courier',
         'telefono': '9612222222',
-        'direccion': 'Tuxtla Gutiérrez, Chiapas',
+        'direccion': 'Tuxtla GutiÃ©rrez, Chiapas',
         'activo': True,
     },
     {
@@ -245,10 +252,19 @@ USUARIOS_APP_SEED = [
         'password': '123456',
         'role': 'admin',
         'telefono': '9613333333',
-        'direccion': 'Tuxtla Gutiérrez, Chiapas',
+        'direccion': 'Tuxtla GutiÃ©rrez, Chiapas',
         'activo': True,
     },
 ]
+
+
+def is_password_hashed(value: str) -> bool:
+    safe = str(value or '').strip()
+    return safe.startswith('$pbkdf2-sha256$')
+
+
+def hash_password(plain_password: str) -> str:
+    return pbkdf2_sha256.using(rounds=PASSWORD_HASH_ROUNDS).hash(str(plain_password or ''))
 
 
 class Cliente(Base):
@@ -392,13 +408,15 @@ def seed_usuarios_app() -> None:
             if usuario:
                 usuario.nombre = payload['nombre']
                 usuario.email = payload['email']
-                usuario.password = payload['password']
+                if not is_password_hashed(usuario.password):
+                    usuario.password = hash_password(usuario.password)
                 usuario.role = payload['role']
                 usuario.telefono = payload['telefono']
                 usuario.direccion = payload['direccion']
                 usuario.activo = payload['activo']
             else:
-                db.add(UsuarioApp(**payload))
+                safe_payload = {**payload, 'password': hash_password(payload['password'])}
+                db.add(UsuarioApp(**safe_payload))
         db.commit()
     finally:
         db.close()
@@ -468,4 +486,7 @@ def get_session() -> Generator:
         yield db
     finally:
         db.close()
+
+
+
 

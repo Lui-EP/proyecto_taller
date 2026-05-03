@@ -1,4 +1,4 @@
-﻿import { useCallback, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,18 +6,20 @@ import ScreenContainer from '../components/ScreenContainer';
 import FadeInView from '../components/FadeInView';
 import MotionPressable from '../components/MotionPressable';
 import StatusPill from '../components/StatusPill';
-import { activeCarts, formatPrice, getOrderStatusMeta } from '../data/demoData';
+import { formatPrice, getOrderStatusMeta } from '../data/demoData';
 import { colors, gradients, radius, shadows, spacing, typography } from '../theme';
 import { useSession } from '../context/SessionContext';
 import { useOrders } from '../context/OrdersContext';
 import { useProducts } from '../context/ProductsContext';
+import { listSellerActiveCarts } from '../lib/productsApi';
 
 export default function SellerDashboardScreen({ navigation }) {
   const { user, logout } = useSession();
   const { getOrdersForSeller, refreshOrders } = useOrders();
-  const { getSellerProducts, getLowStockProducts, getProductById, refreshProducts } = useProducts();
+  const { getSellerProducts, getLowStockProducts, refreshProducts } = useProducts();
   const [refreshing, setRefreshing] = useState(false);
-  const sellerId = user?.id || 'seller-1';
+  const [sellerCarts, setSellerCarts] = useState([]);
+  const sellerId = user?.id || 'vendedor-1';
   const sellerProducts = getSellerProducts(sellerId);
   const sellerOrders = getOrdersForSeller(sellerId);
   const lowStock = getLowStockProducts(10).filter((product) => product.sellerId === sellerId);
@@ -25,24 +27,21 @@ export default function SellerDashboardScreen({ navigation }) {
     .filter((item) => item.sellerId === sellerId)
     .reduce((subtotal, item) => subtotal + item.subtotal, 0), 0);
 
-  const sellerCarts = useMemo(() => activeCarts
-    .map((cart) => {
-      const items = cart.items
-        .map((item) => {
-          const product = getProductById(item.productId);
-          if (!product || product.sellerId !== sellerId) return null;
-          return {
-            ...item,
-            product,
-            subtotal: product.price * item.quantity,
-          };
-        })
-        .filter(Boolean);
-
-      const total = items.reduce((sum, item) => sum + item.subtotal, 0);
-      return items.length ? { ...cart, items, total } : null;
-    })
-    .filter(Boolean), [getProductById, sellerId]);
+  useEffect(() => {
+    let active = true;
+    listSellerActiveCarts(sellerId)
+      .then((carts) => {
+        if (!active) return;
+        setSellerCarts(Array.isArray(carts) ? carts : []);
+      })
+      .catch(() => {
+        if (!active) return;
+        setSellerCarts([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, [sellerId]);
 
   const handleLogout = async () => {
     navigation.navigate('Perfil');
@@ -55,11 +54,12 @@ export default function SellerDashboardScreen({ navigation }) {
       await Promise.all([
         refreshOrders(),
         refreshProducts(),
+        listSellerActiveCarts(sellerId).then((carts) => setSellerCarts(Array.isArray(carts) ? carts : [])),
       ]);
     } finally {
       setRefreshing(false);
     }
-  }, [refreshOrders, refreshProducts]);
+  }, [refreshOrders, refreshProducts, sellerId]);
 
   return (
     <ScreenContainer onRefresh={handleRefresh} refreshing={refreshing}>
@@ -125,18 +125,18 @@ export default function SellerDashboardScreen({ navigation }) {
       <FadeInView delay={190}>
         <Section title="Carritos activos" helper="Estas compras todavía no se pagan, pero te ayudan a medir intención real." emptyText="Sin carritos activos por ahora.">
           {sellerCarts.map((cart) => (
-            <View key={cart.id} style={styles.card}>
+            <View key={cart.owner_id} style={styles.card}>
               <View style={styles.cardTop}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.cardTitle}>{cart.userName}</Text>
-                  <Text style={styles.cardSub}>Actualizado: {formatDate(cart.updatedAt)}</Text>
+                  <Text style={styles.cardTitle}>{cart.owner_name}</Text>
+                  <Text style={styles.cardSub}>Actualizado: {formatDate(cart.updated_at)}</Text>
                 </View>
                 <View style={styles.badgeSoft}>
                   <Text style={styles.badgeSoftText}>{cart.items.length} producto(s)</Text>
                 </View>
               </View>
               {cart.items.map((item) => (
-                <Text key={`${cart.id}-${item.productId}`} style={styles.lineItem}>{item.quantity} x {item.product.name}</Text>
+                <Text key={`${cart.owner_id}-${item.product_id}`} style={styles.lineItem}>{item.quantity} x {item.name}</Text>
               ))}
               <Text style={styles.cardTotal}>Total potencial: {formatPrice(cart.total)}</Text>
             </View>
@@ -277,4 +277,11 @@ const styles = StyleSheet.create({
   badgeSoftText: { color: colors.primaryDark, fontWeight: '700', fontSize: typography.caption },
   emptyText: { color: colors.textSoft },
 });
+
+
+
+
+
+
+
 

@@ -1,11 +1,9 @@
-﻿import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { normalizeOrder, sortOrdersByDate } from '../data/demoData';
 import { createOrderRequest, listOrders, updateOrderStatusRequest } from '../lib/ordersApi';
 import { useSession } from './SessionContext';
 
 const OrdersContext = createContext(null);
-const ORDERS_STORAGE_KEY = 'mercado_local_native_orders_cache';
 
 function normalizeOrderList(orderList = []) {
   return sortOrdersByDate((orderList || []).map(normalizeOrder));
@@ -40,30 +38,36 @@ function buildOrderItems(items = []) {
 }
 
 export function OrdersProvider({ children }) {
-  const { guestId, users } = useSession();
+  const {
+    users,
+    token,
+    ready: sessionReady,
+    user,
+  } = useSession();
   const [orders, setOrders] = useState([]);
   const [ready, setReady] = useState(false);
   const [source, setSource] = useState('remote');
-
-  const persistOrders = useCallback(async (nextOrders) => {
-    const normalized = normalizeOrderList(nextOrders);
-    setOrders(normalized);
-    await AsyncStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(normalized));
-    return normalized;
-  }, []);
 
   const refreshOrders = useCallback(async () => {
     const remoteOrders = normalizeOrderList(await listOrders());
     setOrders(remoteOrders);
     setSource('remote');
-    await AsyncStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(remoteOrders));
     return remoteOrders;
   }, []);
 
   useEffect(() => {
+    if (!sessionReady) return;
     let active = true;
 
     async function loadOrders() {
+      if (!token) {
+        if (active) {
+          setOrders([]);
+          setReady(true);
+          setSource('remote');
+        }
+        return;
+      }
       try {
         const nextOrders = await refreshOrders();
         if (!active) return;
@@ -81,20 +85,22 @@ export function OrdersProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [refreshOrders]);
+  }, [refreshOrders, sessionReady, token]);
 
   const createOrder = useCallback(async (payload) => {
+    if (!user?.id || !token) throw new Error('Inicia sesión para crear pedidos');
     const requestPayload = {
       ...payload,
-      customerId: payload.customerId || guestId || 'guest',
+      customerId: payload.customerId || user.id,
       items: buildOrderItems(payload.items),
     };
 
     const created = normalizeOrder(await createOrderRequest(requestPayload));
-    await persistOrders([created, ...orders]);
+    const nextOrders = normalizeOrderList([created, ...orders]);
+    setOrders(nextOrders);
     setSource('remote');
     return created;
-  }, [guestId, orders, persistOrders]);
+  }, [orders, token, user?.id]);
 
   const updateOrderStatus = useCallback(async (orderId, status, overrides = {}) => {
     const currentOrder = orders.find((order) => order.id === orderId);
@@ -109,10 +115,10 @@ export function OrdersProvider({ children }) {
 
     const updatedOrder = normalizeOrder(await updateOrderStatusRequest(orderId, payload));
     const nextOrders = orders.map((order) => (order.id === orderId ? updatedOrder : order));
-    await persistOrders(nextOrders);
+    setOrders(nextOrders);
     setSource('remote');
     return updatedOrder;
-  }, [orders, persistOrders]);
+  }, [orders]);
 
   const assignCourier = useCallback(async (orderId, courierId, overrides = {}) => {
     const courier = users.find((item) => item.id === courierId);

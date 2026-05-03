@@ -1,4 +1,4 @@
-const LOCATIONIQ_BASE_URL = 'https://us1.locationiq.com/v1';
+﻿const LOCATIONIQ_BASE_URL = 'https://us1.locationiq.com/v1';
 const LOCATIONIQ_DIRECTIONS_BASE_URL = `${LOCATIONIQ_BASE_URL}/directions`;
 
 export const DEFAULT_CHIAPAS_COORDS = {
@@ -14,33 +14,6 @@ export const DEFAULT_CHIAPAS_REGION = {
 };
 
 const CHIAPAS_VIEWBOX = '-94.600000,17.950000,-90.200000,14.450000';
-
-const LOCAL_CITY_CENTERS = [
-  { city: 'Tuxtla Gutiérrez', aliases: ['tuxtla', 'tuxtla gutierrez'], lat: 16.7516, lng: -93.1166 },
-  { city: 'Chiapa de Corzo', aliases: ['chiapa de corzo'], lat: 16.7076, lng: -93.011 },
-  { city: 'San Cristóbal de las Casas', aliases: ['san cristobal', 'san cristobal de las casas'], lat: 16.737, lng: -92.6376 },
-  { city: 'Tapachula', aliases: ['tapachula'], lat: 14.9033, lng: -92.2575 },
-];
-
-const LOCAL_COLONY_CATALOG = [
-  { id: 'tuxtla-bienestar-social', colony: 'Bienestar Social', subdivision: '', city: 'Tuxtla Gutiérrez', aliases: ['bienestar social', 'bienestar social tuxtla'], lat: 16.744722, lng: -93.092917 },
-  { id: 'tuxtla-santa-maria', colony: 'Santa María', subdivision: '', city: 'Tuxtla Gutiérrez', aliases: ['santa maria'], lat: 16.7463, lng: -93.0898 },
-  { id: 'tuxtla-centro', colony: 'Centro', subdivision: '', city: 'Tuxtla Gutiérrez', aliases: ['centro tuxtla', 'centro'], lat: 16.7516, lng: -93.1166 },
-  { id: 'tuxtla-potinaspak', colony: 'Potinaspak', subdivision: '', city: 'Tuxtla Gutiérrez', aliases: ['potinaspak'], lat: 16.7486, lng: -93.0998 },
-  { id: 'tuxtla-teran', colony: 'Terán', subdivision: '', city: 'Tuxtla Gutiérrez', aliases: ['teran'], lat: 16.7592, lng: -93.1568 },
-  { id: 'tuxtla-san-jose-teran', colony: 'San José Terán', subdivision: '', city: 'Tuxtla Gutiérrez', aliases: ['san jose teran'], lat: 16.7608, lng: -93.1529 },
-  { id: 'tuxtla-plan-ayala', colony: 'Plan de Ayala', subdivision: '', city: 'Tuxtla Gutiérrez', aliases: ['plan de ayala'], lat: 16.7632, lng: -93.1451 },
-  { id: 'tuxtla-las-granjas', colony: 'Las Granjas', subdivision: '', city: 'Tuxtla Gutiérrez', aliases: ['las granjas', 'granjas'], lat: 16.7722, lng: -93.1214 },
-  { id: 'tuxtla-infonavit-grijalva', colony: 'Infonavit Grijalva', subdivision: '', city: 'Tuxtla Gutiérrez', aliases: ['infonavit grijalva'], lat: 16.7419, lng: -93.1036 },
-  { id: 'tuxtla-las-torres', colony: 'Las Torres', subdivision: '', city: 'Tuxtla Gutiérrez', aliases: ['las torres', 'torres'], lat: 16.739, lng: -93.1362 },
-  { id: 'chiapa-bienestar-social', colony: 'Bienestar Social', subdivision: '', city: 'Chiapa de Corzo', aliases: ['bienestar social chiapa', 'bienestar social chiapa de corzo'], lat: 16.742927, lng: -93.027281 },
-  { id: 'chiapa-centro', colony: 'Centro', subdivision: '', city: 'Chiapa de Corzo', aliases: ['centro chiapa de corzo'], lat: 16.7076, lng: -93.011 },
-  { id: 'chiapa-santa-elena', colony: 'Santa Elena', subdivision: '', city: 'Chiapa de Corzo', aliases: ['santa elena'], lat: 16.7079, lng: -93.0183 },
-  { id: 'chiapa-benito-juarez', colony: 'Benito Juárez', subdivision: '', city: 'Chiapa de Corzo', aliases: ['benito juarez'], lat: 16.7111, lng: -93.0145 },
-  { id: 'sancris-centro', colony: 'Centro', subdivision: '', city: 'San Cristóbal de las Casas', aliases: ['centro san cristobal'], lat: 16.737, lng: -92.6376 },
-  { id: 'sancris-guadalupe', colony: 'Barrio de Guadalupe', subdivision: '', city: 'San Cristóbal de las Casas', aliases: ['guadalupe san cristobal', 'guadalupe'], lat: 16.7398, lng: -92.6315 },
-  { id: 'tapachula-centro', colony: 'Centro', subdivision: '', city: 'Tapachula', aliases: ['centro tapachula'], lat: 14.9033, lng: -92.2575 },
-];
 
 export function getLocationIqApiKey() {
   return String(process.env.EXPO_PUBLIC_LOCATIONIQ_API_KEY || '').trim();
@@ -106,8 +79,7 @@ export function normalizeText(value) {
     .trim();
 }
 
-function extractZones(address = {}, displayName = '') {
-  const normalizedDisplay = normalizeText(displayName);
+function extractZones(address = {}) {
   const rawColony = String(
     address.neighbourhood
     || address.suburb
@@ -132,14 +104,8 @@ function extractZones(address = {}, displayName = '') {
     || ''
   ).trim();
 
-  const inferredColony = rawColony || LOCAL_COLONY_CATALOG.find((entry) => {
-    const cityMatches = !city || normalizeText(entry.city) === normalizeText(city);
-    if (!cityMatches) return false;
-    return [entry.colony, ...entry.aliases].some((alias) => normalizedDisplay.includes(normalizeText(alias)));
-  })?.colony || '';
-
   return {
-    colony: inferredColony,
+    colony: rawColony,
     subdivision,
     city,
   };
@@ -165,40 +131,6 @@ function buildSuggestion({
     source,
     placeId,
   };
-}
-
-function buildLocalCatalogSuggestions(query) {
-  const normalized = normalizeText(query);
-  if (normalized.length < 3) return [];
-
-  const colonyMatches = LOCAL_COLONY_CATALOG.filter((entry) => {
-    const candidates = [entry.colony, entry.subdivision, entry.city, ...entry.aliases];
-    return candidates.some((candidate) => normalizeText(candidate).includes(normalized) || normalized.includes(normalizeText(candidate)));
-  }).map((entry) => buildSuggestion({
-    lat: entry.lat,
-    lng: entry.lng,
-    display: [entry.colony, entry.subdivision, entry.city, 'Chiapas, México'].filter(Boolean).join(', '),
-    colony: entry.colony,
-    subdivision: entry.subdivision,
-    city: entry.city,
-    source: 'catalogo-local',
-    placeId: entry.id,
-  }));
-
-  const cityMatches = LOCAL_CITY_CENTERS
-    .filter((entry) => [entry.city, ...entry.aliases].some((candidate) => normalizeText(candidate).includes(normalized) || normalized.includes(normalizeText(candidate))))
-    .map((entry) => buildSuggestion({
-      lat: entry.lat,
-      lng: entry.lng,
-      display: `${entry.city}, Chiapas, México`,
-      colony: '',
-      subdivision: '',
-      city: entry.city,
-      source: 'catalogo-local',
-      placeId: entry.city,
-    }));
-
-  return dedupeSuggestions([...colonyMatches, ...cityMatches]);
 }
 
 function dedupeSuggestions(suggestions = []) {
@@ -243,7 +175,7 @@ async function fetchLocationIqCandidates(query) {
 
   return list
     .map((item) => {
-      const zones = extractZones(item.address, item.display_name);
+      const zones = extractZones(item.address);
       return buildSuggestion({
         lat: item.lat,
         lng: item.lon,
@@ -261,40 +193,16 @@ async function fetchLocationIqCandidates(query) {
 export async function searchAddressSuggestions(query) {
   const cleanQuery = String(query || '').trim();
   if (cleanQuery.length < 3) return [];
-
-  const localSuggestions = buildLocalCatalogSuggestions(cleanQuery);
   if (!hasLocationIqKey()) {
-    return localSuggestions;
+    return [];
   }
 
   try {
     const remoteSuggestions = await fetchLocationIqCandidates(cleanQuery);
-    return dedupeSuggestions([...remoteSuggestions, ...localSuggestions]).slice(0, 6);
+    return dedupeSuggestions(remoteSuggestions).slice(0, 6);
   } catch {
-    return localSuggestions;
+    return [];
   }
-}
-
-function findNearestLocalAddress(lat, lng) {
-  const candidates = LOCAL_COLONY_CATALOG.map((entry) => ({
-    ...entry,
-    distanceKm: distanceKm({ lat, lng }, entry),
-  }));
-
-  candidates.sort((left, right) => left.distanceKm - right.distanceKm);
-  const nearest = candidates[0];
-  if (!nearest || nearest.distanceKm > 12) return null;
-
-  return buildSuggestion({
-    lat: nearest.lat,
-    lng: nearest.lng,
-    display: [nearest.colony, nearest.subdivision, nearest.city, 'Chiapas, México'].filter(Boolean).join(', '),
-    colony: nearest.colony,
-    subdivision: nearest.subdivision,
-    city: nearest.city,
-    source: 'catalogo-local',
-    placeId: nearest.id,
-  });
 }
 
 export async function reverseGeocodeLocation(coords) {
@@ -330,7 +238,7 @@ export async function reverseGeocodeLocation(coords) {
       if (!display) {
         throw new Error('locationiq_reverse_empty');
       }
-      const zones = extractZones(payload.address, display);
+      const zones = extractZones(payload.address);
       return buildSuggestion({
         lat: coords.lat,
         lng: coords.lng,
@@ -345,9 +253,6 @@ export async function reverseGeocodeLocation(coords) {
       // fallback below
     }
   }
-
-  const local = findNearestLocalAddress(Number(coords.lat), Number(coords.lng));
-  if (local) return local;
 
   return buildSuggestion({
     lat: coords.lat,
@@ -497,3 +402,7 @@ export async function fetchRoute({ from, to, profile = 'driving' }) {
     return buildStraightLineRoute(from, to);
   }
 }
+
+
+
+

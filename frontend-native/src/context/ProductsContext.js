@@ -1,51 +1,36 @@
-﻿import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { categories, productImages, products as baseProducts } from '../data/demoData';
-import { createProduct as createProductApi, listProducts, updateProduct as updateProductApi } from '../lib/productsApi';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { productImages } from '../data/demoData';
+import {
+  createProduct as createProductApi,
+  listCategories as listCategoriesApi,
+  listProducts,
+  updateProduct as updateProductApi,
+} from '../lib/productsApi';
 
 const ProductsContext = createContext(null);
-const PRODUCTS_CACHE_KEY = 'mercado_local_native_products_cache';
 
-function resolveProduct(rawProduct) {
-  const baseMatch = baseProducts.find((item) => item.id === rawProduct.id) || null;
-  const image = rawProduct.imageData
-    ? { uri: rawProduct.imageData }
-    : productImages[rawProduct.imageKey] || baseMatch?.image || productImages.canastas;
-
-  const category = categories.find((item) => item.id === rawProduct.category);
-
+function normalizeCategory(category = {}) {
   return {
-    ...(baseMatch || {}),
+    id: String(category.id || '').trim(),
+    label: String(category.name || category.label || 'General').trim() || 'General',
+  };
+}
+
+function inferImage(rawProduct = {}) {
+  if (rawProduct.imageData) return { uri: rawProduct.imageData };
+  const key = String(rawProduct.imageKey || '').trim().toLowerCase();
+  return productImages[key] || productImages.canastas;
+}
+
+function resolveProduct(rawProduct = {}) {
+  return {
     ...rawProduct,
-    categoryLabel: rawProduct.categoryLabel || category?.label || baseMatch?.categoryLabel || 'General',
-    image,
+    categoryLabel: rawProduct.categoryLabel || rawProduct.category || 'General',
+    image: inferImage(rawProduct),
   };
 }
 
-function toCachePayload(product) {
-  return {
-    id: product.id,
-    sellerId: product.sellerId,
-    sellerName: product.sellerName,
-    name: product.name,
-    category: product.category,
-    categoryLabel: product.categoryLabel,
-    price: Number(product.price || 0),
-    stock: Number(product.stock || 0),
-    description: product.description || '',
-    featured: Boolean(product.featured),
-    local: product.local !== false,
-    verified: product.verified !== false,
-    rating: Number(product.rating || 5),
-    views: Number(product.views || 0),
-    imageKey: product.imageKey || '',
-    imageData: product.imageData || '',
-    createdAt: product.createdAt || '',
-    updatedAt: product.updatedAt || '',
-  };
-}
-
-function toApiPayload(product) {
+function toApiPayload(product = {}) {
   return {
     seller_id: product.sellerId,
     seller_name: product.sellerName,
@@ -65,24 +50,45 @@ function toApiPayload(product) {
   };
 }
 
+function buildCategories(remoteCategories = [], remoteProducts = []) {
+  const byId = new Map();
+  remoteCategories.forEach((category) => {
+    if (category.id) byId.set(category.id, category);
+  });
+  remoteProducts.forEach((product) => {
+    if (!product.category) return;
+    if (!byId.has(product.category)) {
+      byId.set(product.category, {
+        id: product.category,
+        label: product.categoryLabel || product.category,
+      });
+    }
+  });
+
+  return [
+    { id: 'all', label: 'Todo' },
+    ...Array.from(byId.values()).map(normalizeCategory),
+  ];
+}
+
 export function ProductsProvider({ children }) {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([{ id: 'all', label: 'Todo' }]);
   const [ready, setReady] = useState(false);
   const [source, setSource] = useState('remote');
 
-  const persistCache = useCallback(async (nextProducts) => {
-    const serializable = nextProducts.map(toCachePayload);
-    await AsyncStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(serializable));
-  }, []);
-
   const refreshProducts = useCallback(async () => {
-    const remoteProducts = await listProducts();
-    const resolved = remoteProducts.map(resolveProduct);
-    setProducts(resolved);
+    const [remoteProducts, remoteCategories] = await Promise.all([
+      listProducts(),
+      listCategoriesApi().catch(() => []),
+    ]);
+    const resolvedProducts = remoteProducts.map(resolveProduct);
+    const resolvedCategories = buildCategories(remoteCategories, resolvedProducts);
+    setProducts(resolvedProducts);
+    setCategories(resolvedCategories);
     setSource('remote');
-    await persistCache(remoteProducts);
-    return resolved;
-  }, [persistCache]);
+    return resolvedProducts;
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -95,6 +101,7 @@ export function ProductsProvider({ children }) {
       } catch {
         if (!active) return;
         setProducts([]);
+        setCategories([{ id: 'all', label: 'Todo' }]);
         setSource('remote');
       } finally {
         if (active) setReady(true);
@@ -114,22 +121,23 @@ export function ProductsProvider({ children }) {
 
   const createProduct = useCallback(async (payload) => {
     const created = await createProductApi(toApiPayload(payload));
-    const nextProducts = [resolveProduct(created), ...products.filter((item) => item.id !== created.id)];
+    const resolved = resolveProduct(created);
+    const nextProducts = [resolved, ...products.filter((item) => item.id !== created.id)];
     setProducts(nextProducts);
+    setCategories((prev) => buildCategories(prev.filter((c) => c.id !== 'all'), nextProducts));
     setSource('remote');
-    await persistCache(nextProducts);
-    return nextProducts[0];
-  }, [persistCache, products]);
+    return resolved;
+  }, [products]);
 
   const updateProduct = useCallback(async (productId, patch) => {
     const updated = await updateProductApi(productId, toApiPayload(patch));
     const resolved = resolveProduct(updated);
-    const nextProducts = products.map((product) => product.id === productId ? resolved : product);
+    const nextProducts = products.map((product) => (product.id === productId ? resolved : product));
     setProducts(nextProducts);
+    setCategories((prev) => buildCategories(prev.filter((c) => c.id !== 'all'), nextProducts));
     setSource('remote');
-    await persistCache(nextProducts);
     return resolved;
-  }, [persistCache, products]);
+  }, [products]);
 
   const value = useMemo(() => ({
     ready,
@@ -143,7 +151,7 @@ export function ProductsProvider({ children }) {
     refreshProducts,
     createProduct,
     updateProduct,
-  }), [createProduct, getFeaturedProducts, getLowStockProducts, getProductById, getSellerProducts, products, ready, refreshProducts, source, updateProduct]);
+  }), [categories, createProduct, getFeaturedProducts, getLowStockProducts, getProductById, getSellerProducts, products, ready, refreshProducts, source, updateProduct]);
 
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;
 }

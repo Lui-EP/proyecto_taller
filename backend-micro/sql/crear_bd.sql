@@ -1,5 +1,6 @@
--- Ejecutar conectado a PostgreSQL (por ejemplo desde pgAdmin o SQL Workbench/J)
--- Este script crea las 2 bases separadas del proyecto
-
-CREATE DATABASE bd_proyclientes;
-CREATE DATABASE bd_proypedidos;
+-- Crear las 5 bases de datos (una por microservicio)
+CREATE DATABASE bd_clientes_ms;
+CREATE DATABASE bd_pedidos_ms;
+CREATE DATABASE bd_repartidores_ms;
+CREATE DATABASE bd_vendedores_ms;
+CREATE DATABASE bd_productos_ms;

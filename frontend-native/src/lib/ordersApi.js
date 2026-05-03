@@ -1,8 +1,13 @@
-﻿const rawPedidosApi = `${process.env.EXPO_PUBLIC_PEDIDOS_API_URL || ''}`.trim();
+﻿import { buildAuthHeaders } from './httpAuth';
+
+const rawPedidosApi = `${process.env.EXPO_PUBLIC_PEDIDOS_API_URL || ''}`.trim();
 
 export function getPedidosApiBaseUrl() {
   if (!rawPedidosApi) {
     throw new Error('Falta EXPO_PUBLIC_PEDIDOS_API_URL en frontend-native/.env.local');
+  }
+  if (rawPedidosApi.includes('tu-dominio.com')) {
+    throw new Error('Configura EXPO_PUBLIC_PEDIDOS_API_URL con tu URL real de backend');
   }
   return rawPedidosApi.replace(/\/$/, '');
 }
@@ -13,7 +18,7 @@ async function request(path, options = {}) {
     response = await fetch(`${getPedidosApiBaseUrl()}${path}`, {
       headers: {
         'Content-Type': 'application/json',
-        ...(options.headers || {}),
+        ...buildAuthHeaders(options.headers || {}),
       },
       ...options,
     });
@@ -64,3 +69,9 @@ export async function updateOrderStatusRequest(orderId, payload) {
   });
   return json.pedido;
 }
+
+export async function listPickupStores() {
+  const json = await request('/pickup-stores');
+  return json.stores || [];
+}
+

@@ -7,11 +7,11 @@ import { colors, radius, shadows, spacing, typography } from '../theme';
 import { useSession } from '../context/SessionContext';
 
 export default function LoginScreen({ navigation }) {
-  const { demoUsers, login, ready } = useSession();
+  const { demoUsers, loginAsRole, ready } = useSession();
 
   const handleLogin = async (account) => {
     try {
-      await login(account.email, account.password);
+      await loginAsRole(account.role);
       navigation.replace('Tabs');
     } catch (error) {
       Alert.alert('No se pudo entrar', error?.message || 'Revisa la conexión con el backend o vuelve a intentar.');

@@ -1,12 +1,21 @@
-﻿import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useSession } from './SessionContext';
 import { useProducts } from './ProductsContext';
+import {
+  addCartItem,
+  clearCartItems,
+  getCart,
+  removeCartItem,
+  updateCartItem,
+} from '../lib/productsApi';
 
 const CartContext = createContext(null);
 
-function buildStorageKey(userId) {
-  return `mercado_local_native_cart_${userId || 'guest'}`;
+function normalizeCartItems(rawItems = []) {
+  return (rawItems || []).map((item) => ({
+    productId: item.product_id || item.productId,
+    quantity: Math.max(1, Number(item.quantity || 1)),
+  })).filter((item) => item.productId);
 }
 
 export function CartProvider({ children }) {
@@ -15,88 +24,65 @@ export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
   const [ready, setReady] = useState(false);
 
-  const storageKey = useMemo(() => buildStorageKey(user?.id), [user?.id]);
+  const ownerId = useMemo(() => user?.id || '', [user?.id]);
+
+  const loadCart = useCallback(async () => {
+    if (!ownerId) {
+      setItems([]);
+      return [];
+    }
+    const payload = await getCart(ownerId);
+    const normalized = normalizeCartItems(payload?.items || []);
+    setItems(normalized);
+    return normalized;
+  }, [ownerId]);
 
   useEffect(() => {
     if (!sessionReady) return;
     let active = true;
+    setReady(false);
 
-    async function loadCart() {
-      setReady(false);
-      try {
-        const [currentRaw, guestRaw] = await Promise.all([
-          AsyncStorage.getItem(storageKey),
-          user?.id ? AsyncStorage.getItem(buildStorageKey('guest')) : Promise.resolve(null),
-        ]);
-
-        let currentItems = currentRaw ? JSON.parse(currentRaw) : [];
-        const guestItems = guestRaw ? JSON.parse(guestRaw) : [];
-
-        if (user?.id && guestItems.length) {
-          const merged = [...currentItems];
-          guestItems.forEach((guestItem) => {
-            const existing = merged.find((item) => item.productId === guestItem.productId);
-            const product = getProductById(guestItem.productId);
-            const safeQty = Math.max(1, Number(guestItem.quantity || 1));
-            if (!product) return;
-            if (existing) {
-              existing.quantity = Math.min(product.stock, existing.quantity + safeQty);
-            } else {
-              merged.push({ productId: guestItem.productId, quantity: Math.min(product.stock, safeQty) });
-            }
-          });
-          currentItems = merged;
-          await AsyncStorage.setItem(storageKey, JSON.stringify(currentItems));
-          await AsyncStorage.removeItem(buildStorageKey('guest'));
-        }
-
-        if (active) setItems(Array.isArray(currentItems) ? currentItems : []);
-      } catch {
+    loadCart()
+      .catch(() => {
         if (active) setItems([]);
-      } finally {
+      })
+      .finally(() => {
         if (active) setReady(true);
-      }
-    }
+      });
 
-    loadCart();
     return () => {
       active = false;
     };
-  }, [getProductById, sessionReady, storageKey, user?.id]);
+  }, [loadCart, sessionReady]);
 
-  const persist = async (nextItems) => {
-    setItems(nextItems);
-    await AsyncStorage.setItem(storageKey, JSON.stringify(nextItems));
-  };
-
-  const addItem = async (productId, quantity = 1) => {
+  const addItem = useCallback(async (productId, quantity = 1) => {
+    if (!ownerId) throw new Error('Inicia sesión para agregar al carrito');
     const product = getProductById(productId);
     if (!product) throw new Error('Producto no encontrado');
-    const incoming = Math.max(1, Number(quantity || 1));
-    const existing = items.find((item) => item.productId === productId);
-    const nextItems = existing
-      ? items.map((item) => item.productId === productId
-        ? { ...item, quantity: Math.min(product.stock, item.quantity + incoming) }
-        : item)
-      : [...items, { productId, quantity: Math.min(product.stock, incoming) }];
-    await persist(nextItems);
-  };
+    await addCartItem(ownerId, productId, quantity);
+    await loadCart();
+  }, [getProductById, loadCart, ownerId]);
 
-  const updateItem = async (productId, quantity) => {
+  const updateItem = useCallback(async (productId, quantity) => {
+    if (!ownerId) throw new Error('Inicia sesión para editar el carrito');
     const product = getProductById(productId);
     if (!product) return;
     const safeQty = Math.max(1, Math.min(product.stock, Number(quantity || 1)));
-    const nextItems = items.map((item) => item.productId === productId ? { ...item, quantity: safeQty } : item);
-    await persist(nextItems);
-  };
+    await updateCartItem(ownerId, productId, safeQty);
+    await loadCart();
+  }, [getProductById, loadCart, ownerId]);
 
-  const removeItem = async (productId) => {
-    await persist(items.filter((item) => item.productId !== productId));
-  };
+  const removeItem = useCallback(async (productId) => {
+    if (!ownerId) throw new Error('Inicia sesión para editar el carrito');
+    await removeCartItem(ownerId, productId);
+    await loadCart();
+  }, [loadCart, ownerId]);
 
-  const clearCart = async () => {
-    await persist([]);
-  };
+  const clearCart = useCallback(async () => {
+    if (!ownerId) throw new Error('Inicia sesión para vaciar el carrito');
+    await clearCartItems(ownerId);
+    setItems([]);
+  }, [ownerId]);
 
   const detailedItems = useMemo(() => items.map((item) => {
     const product = getProductById(item.productId);
@@ -122,7 +108,8 @@ export function CartProvider({ children }) {
     updateItem,
     removeItem,
     clearCart,
-  }), [ready, detailedItems, items, count, subtotal]);
+    refreshCart: loadCart,
+  }), [addItem, clearCart, count, detailedItems, items, loadCart, ready, removeItem, subtotal, updateItem]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

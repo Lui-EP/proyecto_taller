@@ -17,7 +17,6 @@ export default function FavoritesPage() {
             const list = await mercado.FavoritesAPI.getAll();
             setProducts(list || []);
             mercado.AppState.favorites = (list || []).map((item) => item.id);
-            localStorage.setItem('favorites', JSON.stringify(mercado.AppState.favorites));
             session.syncState();
         } catch {
             setProducts([]);

@@ -2,6 +2,9 @@
 
 Aplicacion movil nativa de MercadoLocal.
 
+Modo actual: **remoto estricto**.  
+No hay fallback de datos locales para autenticacion, catalogo, carrito o pedidos.
+
 ## 1) Requisitos
 
 - Node.js 20+
@@ -53,6 +56,25 @@ npm run android
 npm run web
 ```
 
+## 4.1) Deploy movil real (no Vercel)
+
+La app nativa no se despliega en Vercel.
+Para Android/iOS usa Expo EAS:
+
+```bash
+npm install
+npx expo login
+npx eas build:configure
+npx eas build -p android --profile preview
+```
+
+Ya se incluye `eas.json`.
+
+Si quieres flujo "solo AWS":
+- Backend en AWS.
+- Builds nativos con EAS (o CI propio).
+- Publicacion por tiendas o distribucion interna (APK/AAB), no por Vercel.
+
 ## 5) Scripts utiles
 
 - `npm start` -> inicia Expo en LAN
@@ -89,7 +111,7 @@ Si eso no abre, la app tampoco podra conectarse.
 
 ## 9) Errores comunes
 
-1. Se queda en "Fuente: local" o no inicia sesion rapido
+1. No inicia sesion o tarda demasiado
 - Normalmente el celular no alcanza `8001/8002`.
 - Revisa IP en `.env.local`, firewall y WSL portproxy.
 

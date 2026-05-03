@@ -1,2 +1,6 @@
 -r clientes-service/requirements.txt
 -r pedidos-service/requirements.txt
+-r repartidores-service/requirements.txt
+-r vendedores-service/requirements.txt
+-r productos-service/requirements.txt
+-r api-gateway/requirements.txt

@@ -1,16 +1,17 @@
-﻿services:
+services:
   postgres-micro:
     image: postgres:16
     container_name: mercadolocal-postgres-micro
     restart: unless-stopped
     environment:
-      POSTGRES_DB: mercado_micro
-      POSTGRES_USER: mercadolocal
-      POSTGRES_PASSWORD: mercadolocal
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pERSONAL04
     ports:
-      - '5434:5432'
+      - '5433:5432'
     volumes:
       - postgres_micro_data:/var/lib/postgresql/data
+      - ./sql/crear_bd.sql:/docker-entrypoint-initdb.d/01-crear_bd.sql:ro
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -25,19 +26,14 @@
     container_name: mercadolocal-clientes-service
     restart: unless-stopped
     environment:
-      DB_HOST: postgres-micro
-      DB_PORT: 5432
-      DB_NAME: mercado_micro
-      DB_USER: mercadolocal
-      DB_PASSWORD: mercadolocal
-      RABBIT_HOST: rabbitmq
-      RABBIT_PORT: 5672
-      RABBIT_USER: guest
-      RABBIT_PASSWORD: guest
-      CLIENTES_EVENTS_QUEUE: CLIENTES_EVENTS
+      POSTGRES_HOST: postgres-micro
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: bd_clientes_ms
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pERSONAL04
+      ENABLE_RABBIT: 'false'
     depends_on:
       - postgres-micro
-      - rabbitmq
     ports:
       - '8001:8001'
 
@@ -46,23 +42,63 @@
     container_name: mercadolocal-pedidos-service
     restart: unless-stopped
     environment:
-      DB_HOST: postgres-micro
-      DB_PORT: 5432
-      DB_NAME: mercado_micro
-      DB_USER: mercadolocal
-      DB_PASSWORD: mercadolocal
+      POSTGRES_HOST: postgres-micro
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: bd_pedidos_ms
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pERSONAL04
       CLIENTES_SERVICE_URL: http://clientes-service:8001
-      RABBIT_HOST: rabbitmq
-      RABBIT_PORT: 5672
-      RABBIT_USER: guest
-      RABBIT_PASSWORD: guest
-      PEDIDOS_EVENTS_QUEUE: PEDIDOS_EVENTS
+      ENABLE_RABBIT: 'false'
     depends_on:
       - postgres-micro
-      - rabbitmq
       - clientes-service
     ports:
       - '8002:8002'
+
+  repartidores-service:
+    build: ./repartidores-service
+    container_name: mercadolocal-repartidores-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres-micro
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: bd_repartidores_ms
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pERSONAL04
+    depends_on:
+      - postgres-micro
+    ports:
+      - '8003:8003'
+
+  vendedores-service:
+    build: ./vendedores-service
+    container_name: mercadolocal-vendedores-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres-micro
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: bd_vendedores_ms
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pERSONAL04
+    depends_on:
+      - postgres-micro
+    ports:
+      - '8004:8004'
+
+  productos-service:
+    build: ./productos-service
+    container_name: mercadolocal-productos-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST: postgres-micro
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: bd_productos_ms
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pERSONAL04
+    depends_on:
+      - postgres-micro
+    ports:
+      - '8005:8005'
 
 volumes:
   postgres_micro_data:

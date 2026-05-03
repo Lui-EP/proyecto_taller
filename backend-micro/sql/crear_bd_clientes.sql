@@ -1,3 +1,1 @@
--- Base para clientes-service
-
-CREATE DATABASE bd_proyclientes;
+CREATE DATABASE bd_clientes_ms;

@@ -15,10 +15,8 @@ import NativeLocationMap from '../components/NativeLocationMap';
 import { useCart } from '../context/CartContext';
 import { useOrders } from '../context/OrdersContext';
 import { useSession } from '../context/SessionContext';
-import {
-  formatPrice,
-  pickupStores,
-} from '../data/demoData';
+import { formatPrice } from '../data/demoData';
+import { listPickupStores } from '../lib/ordersApi';
 import { useForegroundLocation } from '../hooks/useForegroundLocation';
 import {
   DEFAULT_CHIAPAS_COORDS,
@@ -37,7 +35,8 @@ export default function CheckoutScreen({ navigation }) {
   const { createOrder } = useOrders();
   const { user, guestId } = useSession();
   const [deliveryMethod, setDeliveryMethod] = useState('delivery');
-  const [pickupStoreId, setPickupStoreId] = useState(pickupStores[0].id);
+  const [stores, setStores] = useState([]);
+  const [pickupStoreId, setPickupStoreId] = useState('');
   const [customerName, setCustomerName] = useState(user?.name || '');
   const [phone, setPhone] = useState(user?.phone || '');
   const [addressState, setAddressState] = useState({
@@ -63,9 +62,27 @@ export default function CheckoutScreen({ navigation }) {
     requestCurrentLocation,
   } = useForegroundLocation();
 
+  useEffect(() => {
+    let active = true;
+    listPickupStores()
+      .then((remoteStores) => {
+        if (!active) return;
+        const list = Array.isArray(remoteStores) ? remoteStores : [];
+        setStores(list);
+        setPickupStoreId((current) => current || list[0]?.id || '');
+      })
+      .catch(() => {
+        if (!active) return;
+        setStores([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const selectedStore = useMemo(
-    () => pickupStores.find((store) => store.id === pickupStoreId) || pickupStores[0],
-    [pickupStoreId]
+    () => stores.find((store) => store.id === pickupStoreId) || stores[0] || null,
+    [pickupStoreId, stores]
   );
   const shipping = deliveryMethod === 'delivery' ? 45 : 0;
   const total = subtotal + shipping;
@@ -117,7 +134,7 @@ export default function CheckoutScreen({ navigation }) {
     const coords = await requestCurrentLocation();
     if (!coords) {
       hapticWarning();
-      Alert.alert('UbicaciÃ³n no disponible', 'Activa el permiso de ubicaciÃ³n para usar tu posiciÃ³n actual.');
+      Alert.alert('Ubicación no disponible', 'Activa el permiso de Ubicación para usar tu posición actual.');
       return;
     }
 
@@ -203,19 +220,25 @@ export default function CheckoutScreen({ navigation }) {
   const handleSubmit = async () => {
     if (!items.length) {
       hapticWarning();
-      Alert.alert('Carrito vacÃ­o', 'Agrega productos antes de continuar.');
+      Alert.alert('Carrito vacío', 'Agrega productos antes de continuar.');
       return;
     }
 
     if (!customerName.trim() || !phone.trim()) {
       hapticWarning();
-      Alert.alert('Faltan datos', 'Escribe tu nombre y telÃ©fono.');
+      Alert.alert('Faltan datos', 'Escribe tu nombre y teléfono.');
       return;
     }
 
     if (deliveryMethod === 'delivery' && !addressState.text.trim()) {
       hapticWarning();
-      Alert.alert('Falta direcciÃ³n', 'Escribe la direcciÃ³n de entrega.');
+      Alert.alert('Falta dirección', 'Escribe la dirección de entrega.');
+      return;
+    }
+
+    if (deliveryMethod === 'pickup' && !selectedStore) {
+      hapticWarning();
+      Alert.alert('Sin tiendas disponibles', 'No hay tiendas de recogida disponibles en este momento.');
       return;
     }
 
@@ -228,12 +251,12 @@ export default function CheckoutScreen({ navigation }) {
         customerName: customerName.trim() || 'Invitado',
         customerPhone: phone.trim(),
         deliveryMethod,
-        pickupStoreId: deliveryMethod === 'pickup' ? selectedStore.id : '',
-        pickupStoreName: deliveryMethod === 'pickup' ? selectedStore.name : '',
-        pickupStoreLat: deliveryMethod === 'pickup' ? selectedStore.lat : null,
-        pickupStoreLng: deliveryMethod === 'pickup' ? selectedStore.lng : null,
-        address: deliveryMethod === 'pickup' ? selectedStore.address : deliveryAddress,
-        addressLabel: deliveryMethod === 'pickup' ? selectedStore.address : deliveryAddress,
+        pickupStoreId: deliveryMethod === 'pickup' ? selectedStore?.id || '' : '',
+        pickupStoreName: deliveryMethod === 'pickup' ? selectedStore?.name || '' : '',
+        pickupStoreLat: deliveryMethod === 'pickup' ? selectedStore?.lat ?? null : null,
+        pickupStoreLng: deliveryMethod === 'pickup' ? selectedStore?.lng ?? null : null,
+        address: deliveryMethod === 'pickup' ? selectedStore?.address || 'Tienda local' : deliveryAddress,
+        addressLabel: deliveryMethod === 'pickup' ? selectedStore?.address || 'Tienda local' : deliveryAddress,
         addressLat: deliveryMethod === 'pickup' ? null : addressState.coords?.lat ?? null,
         addressLng: deliveryMethod === 'pickup' ? null : addressState.coords?.lng ?? null,
         addressColony: deliveryMethod === 'pickup' ? '' : addressState.colony,
@@ -263,16 +286,16 @@ export default function CheckoutScreen({ navigation }) {
         <View style={styles.emptyCard}>
           <Ionicons name="cart-outline" size={36} color={colors.primary} />
           <Text style={styles.emptyTitle}>No hay productos para pagar</Text>
-          <Text style={styles.emptyText}>Vuelve al catÃ¡logo y agrega algo antes de finalizar la compra.</Text>
+          <Text style={styles.emptyText}>Vuelve al catálogo y agrega algo antes de finalizar la compra.</Text>
           <MotionPressable style={styles.primaryButton} onPress={() => navigation.navigate('Catalogo')}>
-            <Text style={styles.primaryButtonText}>Ir al catÃ¡logo</Text>
+            <Text style={styles.primaryButtonText}>Ir al catálogo</Text>
           </MotionPressable>
         </View>
       </ScreenContainer>
     );
   }
 
-  const pickupMapMarkers = [
+  const pickupMapMarkers = selectedStore ? [
     {
       key: selectedStore.id,
       lat: selectedStore.lat,
@@ -281,7 +304,7 @@ export default function CheckoutScreen({ navigation }) {
       description: selectedStore.address,
       pinColor: colors.primary,
     },
-  ];
+  ] : [];
 
   const deliveryMapMarkers = [
     addressState.coords ? {
@@ -296,8 +319,8 @@ export default function CheckoutScreen({ navigation }) {
       key: 'device-point',
       lat: deviceCoords.lat,
       lng: deviceCoords.lng,
-      title: 'Mi ubicaciÃ³n',
-      description: 'UbicaciÃ³n actual del dispositivo',
+      title: 'Mi Ubicación',
+      description: 'Ubicación actual del dispositivo',
       pinColor: colors.accent,
     } : null,
   ].filter(Boolean);
@@ -318,14 +341,14 @@ export default function CheckoutScreen({ navigation }) {
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>Finaliza tu compra</Text>
           <Text style={styles.heroText}>
-            Ya puedes fijar tu direcciÃ³n con mapa, colonia y pin exacto desde la app mÃ³vil.
+            Ya puedes fijar tu dirección con mapa, colonia y pin exacto desde la app móvil.
           </Text>
         </View>
       </FadeInView>
 
       <FadeInView delay={80}>
         <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>MÃ©todo de entrega</Text>
+          <Text style={styles.sectionTitle}>Método de entrega</Text>
           <View style={styles.segmentRow}>
             <OptionChip
               label="A domicilio"
@@ -343,7 +366,7 @@ export default function CheckoutScreen({ navigation }) {
 
           {deliveryMethod === 'pickup' ? (
             <View style={styles.storeList}>
-              {pickupStores.map((store) => {
+              {stores.map((store) => {
                 const active = store.id === pickupStoreId;
                 return (
                   <MotionPressable
@@ -358,10 +381,10 @@ export default function CheckoutScreen({ navigation }) {
                 );
               })}
               <NativeLocationMap
-                title="UbicaciÃ³n de la tienda"
+                title="Ubicación de la tienda"
                 height={220}
                 markers={pickupMapMarkers}
-                initialRegion={buildRegionFromPoints([{ lat: selectedStore.lat, lng: selectedStore.lng }])}
+                initialRegion={selectedStore ? buildRegionFromPoints([{ lat: selectedStore.lat, lng: selectedStore.lng }]) : undefined}
                 helperText="Si eliges recoger en tienda, la app te deja visible el punto exacto desde ahora."
               />
             </View>
@@ -382,7 +405,7 @@ export default function CheckoutScreen({ navigation }) {
           <TextInput
             value={phone}
             onChangeText={setPhone}
-            placeholder="TelÃ©fono"
+            placeholder="teléfono"
             placeholderTextColor={colors.textMuted}
             keyboardType="phone-pad"
             style={styles.input}
@@ -397,7 +420,7 @@ export default function CheckoutScreen({ navigation }) {
                   disabled={locatingDevice}
                 >
                   <Text style={styles.secondaryButtonText}>
-                    {locatingDevice ? 'Ubicando...' : 'Usar mi ubicaciÃ³n'}
+                    {locatingDevice ? 'Ubicando...' : 'Usar mi Ubicación'}
                   </Text>
                 </MotionPressable>
                 <View style={styles.locationStatusBox}>
@@ -433,7 +456,7 @@ export default function CheckoutScreen({ navigation }) {
               <TextInput
                 value={addressState.text}
                 onChangeText={handleAddressChange}
-                placeholder="DirecciÃ³n de entrega"
+                placeholder="dirección de entrega"
                 placeholderTextColor={colors.textMuted}
                 style={[styles.input, styles.textarea]}
                 multiline
@@ -458,7 +481,7 @@ export default function CheckoutScreen({ navigation }) {
                       <Text style={styles.suggestionMain}>{suggestion.display}</Text>
                       {(suggestion.colony || suggestion.subdivision) ? (
                         <Text style={styles.suggestionMeta}>
-                          {[suggestion.colony, suggestion.subdivision].filter(Boolean).join(' Â· ')}
+                          {[suggestion.colony, suggestion.subdivision].filter(Boolean).join(' · ')}
                         </Text>
                       ) : null}
                     </MotionPressable>
@@ -475,14 +498,14 @@ export default function CheckoutScreen({ navigation }) {
                 helperText={
                   addressLookupStatus === 'locating'
                     ? 'Buscando la colonia y ajustando el pin...'
-                    : 'Toca el mapa para mover el pin o escribe una direcciÃ³n y la app intentarÃ¡ ubicarla sola.'
+                    : 'Toca el mapa para mover el pin o escribe una dirección y la app intentará ubicarla sola.'
                 }
               />
             </>
           ) : (
             <View style={styles.pickupInfo}>
               <Ionicons name="location-outline" size={18} color={colors.primary} />
-              <Text style={styles.pickupInfoText}>{selectedStore.address}</Text>
+              <Text style={styles.pickupInfoText}>{selectedStore?.address || 'Selecciona una tienda para recoger.'}</Text>
             </View>
           )}
 
@@ -513,7 +536,7 @@ export default function CheckoutScreen({ navigation }) {
           <View style={styles.divider} />
           <SummaryRow label="Subtotal" value={formatPrice(subtotal)} />
           <SummaryRow
-            label={deliveryMethod === 'delivery' ? 'EnvÃ­o' : 'Recoger en tienda'}
+            label={deliveryMethod === 'delivery' ? 'Envío' : 'Recoger en tienda'}
             value={shipping ? formatPrice(shipping) : 'Gratis'}
           />
           <SummaryRow label="Total" value={formatPrice(total)} strong />
@@ -855,4 +878,5 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
 });
+
 

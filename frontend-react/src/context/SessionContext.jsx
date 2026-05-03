@@ -50,7 +50,6 @@ export function SessionProvider({ children }) {
         const result = await mercado.AuthAPI.login(email, password);
         mercado.AppState.token = result.token;
         mercado.AppState.user = result.user;
-        localStorage.setItem('token', result.token);
         if (typeof mercado.syncCartAfterAuth === 'function') {
             mercado.syncCartAfterAuth(result.user);
         }
@@ -74,7 +73,6 @@ export function SessionProvider({ children }) {
 
         mercado.AppState.token = result.token;
         mercado.AppState.user = result.user;
-        localStorage.setItem('token', result.token);
         if (typeof mercado.syncCartAfterAuth === 'function') {
             mercado.syncCartAfterAuth(result.user);
         }
@@ -86,8 +84,6 @@ export function SessionProvider({ children }) {
         const mercado = getMercadoLocal();
         mercado.AppState.token = null;
         mercado.AppState.user = null;
-        localStorage.removeItem('token');
-        localStorage.removeItem('demoUserId');
         if (typeof mercado.syncCartStateForUser === 'function') {
             mercado.syncCartStateForUser(null);
         }

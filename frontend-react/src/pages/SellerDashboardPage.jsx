@@ -207,32 +207,17 @@ export default function SellerDashboardPage() {
         setSelectedImageFiles(files);
     };
 
+    const fileToDataUrl = (file) =>
+        new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = () => reject(new Error('No se pudo leer la imagen seleccionada'));
+            reader.readAsDataURL(file);
+        });
+
     const uploadSelectedImages = async () => {
         if (!selectedImageFiles.length) return [];
-
-        if (mercado.DEMO_MODE) {
-            return selectedImageFiles.map((file) => URL.createObjectURL(file));
-        }
-
-        const formData = new FormData();
-        selectedImageFiles.forEach((file) => {
-            formData.append('images', file);
-        });
-
-        const response = await fetch(`${mercado.API_URL}/uploads/images`, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${mercado.AppState.token}`,
-            },
-            body: formData,
-        });
-
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            throw new Error(payload.detail || 'No se pudieron subir imagenes');
-        }
-
-        return payload.urls || [];
+        return Promise.all(selectedImageFiles.map((file) => fileToDataUrl(file)));
     };
 
     const saveProduct = async (event) => {

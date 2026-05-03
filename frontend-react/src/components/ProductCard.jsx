@@ -32,7 +32,6 @@ export default function ProductCard({ product, onChanged }) {
                 mercado.AppState.favorites.push(product.id);
                 mercado.showToast('Añadido a favoritos');
             }
-            localStorage.setItem('favorites', JSON.stringify(mercado.AppState.favorites));
             session.syncState();
             if (typeof onChanged === 'function') onChanged();
         } catch {

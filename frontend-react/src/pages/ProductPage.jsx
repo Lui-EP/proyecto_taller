@@ -93,7 +93,6 @@ export default function ProductPage() {
                 mercado.AppState.favorites.push(product.id);
                 mercado.showToast('Añadido a favoritos');
             }
-            localStorage.setItem('favorites', JSON.stringify(mercado.AppState.favorites));
             session.syncState();
         } catch {
             mercado.showToast('Error al actualizar favoritos', 'error');

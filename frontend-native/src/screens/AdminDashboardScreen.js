@@ -6,7 +6,7 @@ import ScreenContainer from '../components/ScreenContainer';
 import FadeInView from '../components/FadeInView';
 import MotionPressable from '../components/MotionPressable';
 import StatusPill from '../components/StatusPill';
-import { activeCarts, getOrderStatusMeta } from '../data/demoData';
+import { getOrderStatusMeta } from '../data/demoData';
 import { colors, gradients, radius, shadows, spacing, typography } from '../theme';
 import { useOrders } from '../context/OrdersContext';
 import { useProducts } from '../context/ProductsContext';
@@ -53,7 +53,7 @@ export default function AdminDashboardScreen({ navigation }) {
 
           <View style={styles.metricsRow}>
             <MetricCard icon="cube-outline" value={`${products.length}`} label="productos" />
-            <MetricCard icon="cart-outline" value={`${activeCarts.length}`} label="carritos" />
+            <MetricCard icon="cart-outline" value={`${stats.pending}`} label="pendientes" />
             <MetricCard icon="bicycle-outline" value={`${stats.transit}`} label="ruta" />
           </View>
         </LinearGradient>

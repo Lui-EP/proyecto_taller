@@ -1,9 +1,13 @@
 import base64
-from datetime import datetime
+import os
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from jose import JWTError, jwt
+from passlib.hash import pbkdf2_sha256
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.orm import Session
 
@@ -16,6 +20,7 @@ from infraestructura.adapters.db import (
     Producto,
     Reporte,
     Resena,
+    SessionLocal,
     SellerProfile,
     UsuarioApp,
     get_session,
@@ -24,11 +29,20 @@ from infraestructura.adapters.db import (
 
 
 app = FastAPI(title='Microservicio Clientes MercadoLocal', version='2.0.0')
+security_scheme = HTTPBearer(auto_error=False)
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', '').strip()
+JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256').strip()
+JWT_EXPIRE_MINUTES = int(os.getenv('JWT_EXPIRE_MINUTES', '120'))
+PASSWORD_HASH_ROUNDS = int(os.getenv('PASSWORD_HASH_ROUNDS', '29000'))
+
+raw_origins = os.getenv('ALLOWED_ORIGINS', '*').strip()
+allow_all_origins = raw_origins == '*' or raw_origins == ''
+allowed_origins = ['*'] if allow_all_origins else [item.strip() for item in raw_origins.split(',') if item.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=not allow_all_origins,
     allow_methods=['*'],
     allow_headers=['*'],
 )
@@ -120,11 +134,162 @@ class SellerProfileIn(BaseModel):
     curp: str | None = Field(default='')
 
 
+class TokenUser(BaseModel):
+    id: str
+    role: str
+    email: str
+
+
+ROLE_ID_PREFIX = {
+    'buyer': 'comprador',
+    'seller': 'vendedor',
+    'courier': 'repartidor',
+    'admin': 'admin',
+}
+
+
 def normalize_role(value: str) -> str:
     role = str(value or '').strip().lower()
     if role in {'buyer', 'seller', 'courier', 'admin'}:
         return role
     return 'buyer'
+
+
+def role_id_prefix(role: str) -> str:
+    return ROLE_ID_PREFIX.get(normalize_role(role), 'comprador')
+
+
+def ensure_jwt_configured() -> None:
+    if not JWT_SECRET_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='JWT no configurado en servidor (JWT_SECRET_KEY).',
+        )
+
+
+def is_password_hashed(value: str) -> bool:
+    safe = str(value or '').strip()
+    return safe.startswith('$pbkdf2-sha256$')
+
+
+def hash_password(plain_password: str) -> str:
+    return pbkdf2_sha256.using(rounds=PASSWORD_HASH_ROUNDS).hash(str(plain_password or ''))
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    safe_hash = str(hashed_password or '').strip()
+    if not safe_hash:
+        return False
+    if safe_hash.startswith('$pbkdf2-sha256$'):
+        return pbkdf2_sha256.verify(str(plain_password or ''), safe_hash)
+    return str(plain_password or '') == safe_hash
+
+
+def migrate_plaintext_passwords(db: Session) -> int:
+    users = db.query(UsuarioApp).all()
+    updated = 0
+    for user in users:
+        if not is_password_hashed(user.password):
+            user.password = hash_password(user.password)
+            updated += 1
+    if updated:
+        db.commit()
+    return updated
+
+
+def migrate_user_id_prefixes(db: Session) -> int:
+    users = db.query(UsuarioApp).all()
+    updated = 0
+    for user in users:
+        old_id = str(user.usuario_id or '').strip()
+        role = normalize_role(user.role)
+        prefix = role_id_prefix(role)
+        if not old_id:
+            continue
+        if '-' not in old_id:
+            continue
+        current_prefix, suffix = old_id.split('-', 1)
+        old_prefixes = {'buyer', 'seller', 'courier'}
+        if current_prefix not in old_prefixes:
+            continue
+        new_id = f'{prefix}-{suffix}'
+        if new_id == old_id:
+            continue
+        if db.get(UsuarioApp, new_id):
+            continue
+
+        if role == 'seller':
+            db.query(Producto).filter(Producto.seller_id == old_id).update({'seller_id': new_id})
+            profile = db.get(SellerProfile, old_id)
+            if profile:
+                profile.seller_id = new_id
+
+        db.query(CarritoItem).filter(CarritoItem.owner_id == old_id).update({'owner_id': new_id})
+        db.query(Favorito).filter(Favorito.user_id == old_id).update({'user_id': new_id})
+        db.query(Resena).filter(Resena.user_id == old_id).update({'user_id': new_id})
+        db.query(Reporte).filter(Reporte.reporter_id == old_id).update({'reporter_id': new_id})
+        user.usuario_id = new_id
+        updated += 1
+
+    if updated:
+        db.commit()
+    return updated
+
+
+def issue_access_token(usuario: UsuarioApp) -> str:
+    ensure_jwt_configured()
+    now = datetime.now(timezone.utc)
+    payload = {
+        'sub': usuario.usuario_id,
+        'role': normalize_role(usuario.role),
+        'email': usuario.email,
+        'iat': int(now.timestamp()),
+        'exp': int((now + timedelta(minutes=JWT_EXPIRE_MINUTES)).timestamp()),
+    }
+    return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+def get_current_user_from_jwt(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+    db: Session = Depends(get_session),
+) -> UsuarioApp:
+    if not credentials or credentials.scheme.lower() != 'bearer':
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Token requerido')
+
+    token = credentials.credentials or ''
+    ensure_jwt_configured()
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        user_id = str(payload.get('sub') or '').strip()
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Token invalido') from None
+
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Token invalido')
+
+    usuario = db.get(UsuarioApp, user_id)
+    if not usuario or not usuario.activo:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Usuario no autorizado')
+    return usuario
+
+
+def require_roles(*roles: str):
+    normalized_roles = {normalize_role(role) for role in roles}
+
+    def _guard(usuario: UsuarioApp = Depends(get_current_user_from_jwt)) -> UsuarioApp:
+        if normalize_role(usuario.role) not in normalized_roles:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para esta ruta')
+        return usuario
+
+    return _guard
+
+
+def ensure_seller_or_admin_scope(target_seller_id: str, usuario: UsuarioApp) -> None:
+    role = normalize_role(usuario.role)
+    if role == 'admin':
+        return
+    if role != 'seller' or usuario.usuario_id != str(target_seller_id or '').strip():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para este vendedor')
 
 
 def slugify_category(value: str) -> str:
@@ -235,6 +400,12 @@ def serialize_producto(producto: Producto, db: Session) -> dict:
 @app.on_event('startup')
 def on_startup():
     init_db()
+    db = SessionLocal()
+    try:
+        migrate_user_id_prefixes(db)
+        migrate_plaintext_passwords(db)
+    finally:
+        db.close()
 
 
 @app.get('/')
@@ -313,7 +484,7 @@ def listar_usuarios_demo(role: str | None = Query(default=None), db: Session = D
     if role:
         query = query.filter(UsuarioApp.role == normalize_role(role))
     usuarios = query.order_by(UsuarioApp.nombre.asc()).all()
-    return {'status': 'ok', 'users': [serialize_usuario(usuario, include_password=True) for usuario in usuarios]}
+    return {'status': 'ok', 'users': [serialize_usuario(usuario, include_password=False) for usuario in usuarios]}
 
 
 @app.get('/usuarios-app/{usuario_id}')
@@ -328,12 +499,20 @@ def obtener_usuario_app(usuario_id: str, db: Session = Depends(get_session)):
 def login_app(payload: LoginIn, db: Session = Depends(get_session)):
     usuario = db.query(UsuarioApp).filter(
         UsuarioApp.email == payload.email,
-        UsuarioApp.password == payload.password,
         UsuarioApp.activo.is_(True),
     ).first()
     if not usuario:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Credenciales inválidas')
-    return {'status': 'ok', 'user': serialize_usuario(usuario)}
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Credenciales invalidas')
+    if not verify_password(payload.password, usuario.password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Credenciales invalidas')
+    access_token = issue_access_token(usuario)
+    return {
+        'status': 'ok',
+        'access_token': access_token,
+        'token_type': 'bearer',
+        'expires_in': JWT_EXPIRE_MINUTES * 60,
+        'user': serialize_usuario(usuario),
+    }
 
 
 @app.post('/auth/register')
@@ -344,10 +523,10 @@ def register_app(payload: RegisterIn, db: Session = Depends(get_session)):
 
     role = normalize_role(payload.role)
     user = UsuarioApp(
-        usuario_id=f'{role}-{uuid4().hex[:8]}',
+        usuario_id=f'{role_id_prefix(role)}-{uuid4().hex[:8]}',
         nombre=payload.name.strip(),
         email=payload.email.strip().lower(),
-        password=payload.password,
+        password=hash_password(payload.password),
         role=role,
         telefono=(payload.phone or '').strip(),
         direccion=(payload.location or '').strip(),
@@ -372,7 +551,19 @@ def register_app(payload: RegisterIn, db: Session = Depends(get_session)):
         db.add(profile)
         db.commit()
 
-    return {'status': 'ok', 'user': serialize_usuario(user)}
+    access_token = issue_access_token(user)
+    return {
+        'status': 'ok',
+        'access_token': access_token,
+        'token_type': 'bearer',
+        'expires_in': JWT_EXPIRE_MINUTES * 60,
+        'user': serialize_usuario(user),
+    }
+
+
+@app.get('/auth/me')
+def auth_me(usuario: UsuarioApp = Depends(get_current_user_from_jwt)):
+    return {'status': 'ok', 'user': serialize_usuario(usuario)}
 
 
 @app.get('/categorias')
@@ -459,7 +650,12 @@ def obtener_producto(producto_id: str, db: Session = Depends(get_session)):
 
 
 @app.post('/productos', status_code=status.HTTP_201_CREATED)
-def crear_producto(payload: ProductoIn, db: Session = Depends(get_session)):
+def crear_producto(
+    payload: ProductoIn,
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('seller', 'admin')),
+):
+    ensure_seller_or_admin_scope(payload.seller_id, usuario)
     producto = Producto(
         producto_id=f'pn-{uuid4().hex[:10]}',
         seller_id=payload.seller_id,
@@ -487,10 +683,16 @@ def crear_producto(payload: ProductoIn, db: Session = Depends(get_session)):
 
 
 @app.put('/productos/{producto_id}')
-def actualizar_producto(producto_id: str, payload: ProductoUpdate, db: Session = Depends(get_session)):
+def actualizar_producto(
+    producto_id: str,
+    payload: ProductoUpdate,
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('seller', 'admin')),
+):
     producto = db.get(Producto, producto_id)
     if not producto:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
+    ensure_seller_or_admin_scope(producto.seller_id, usuario)
 
     data = payload.model_dump(exclude_unset=True)
     field_map = {
@@ -518,20 +720,31 @@ def actualizar_producto(producto_id: str, payload: ProductoUpdate, db: Session =
 
 
 @app.delete('/productos/{producto_id}')
-def eliminar_producto(producto_id: str, db: Session = Depends(get_session)):
+def eliminar_producto(
+    producto_id: str,
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('seller', 'admin')),
+):
     producto = db.get(Producto, producto_id)
     if not producto:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
+    ensure_seller_or_admin_scope(producto.seller_id, usuario)
     db.delete(producto)
     db.commit()
     return {'status': 'ok', 'deleted': True, 'product_id': producto_id}
 
 
 @app.post('/productos/{producto_id}/feature')
-def destacar_producto(producto_id: str, days: int = Query(default=7), db: Session = Depends(get_session)):
+def destacar_producto(
+    producto_id: str,
+    days: int = Query(default=7),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('seller', 'admin')),
+):
     producto = db.get(Producto, producto_id)
     if not producto:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
+    ensure_seller_or_admin_scope(producto.seller_id, usuario)
     producto.featured = True
     producto.updated_at = datetime.utcnow()
     db.commit()
@@ -539,11 +752,21 @@ def destacar_producto(producto_id: str, days: int = Query(default=7), db: Sessio
 
 
 @app.get('/cart')
-def obtener_carrito(owner_id: str = Query(...), db: Session = Depends(get_session)):
-    items = db.query(CarritoItem).filter(CarritoItem.owner_id == owner_id).order_by(CarritoItem.updated_at.desc()).all()
+def obtener_carrito(
+    owner_id: str | None = Query(default=None),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    resolved_owner_id = str(owner_id or '').strip()
+    if normalize_role(usuario.role) != 'admin':
+        resolved_owner_id = usuario.usuario_id
+    elif not resolved_owner_id:
+        resolved_owner_id = usuario.usuario_id
+
+    items = db.query(CarritoItem).filter(CarritoItem.owner_id == resolved_owner_id).order_by(CarritoItem.updated_at.desc()).all()
     return {
         'status': 'ok',
-        'owner_id': owner_id,
+        'owner_id': resolved_owner_id,
         'items': [
             {'product_id': item.product_id, 'quantity': item.quantity, 'updated_at': item.updated_at.isoformat() if item.updated_at else ''}
             for item in items
@@ -553,21 +776,45 @@ def obtener_carrito(owner_id: str = Query(...), db: Session = Depends(get_sessio
 
 
 @app.post('/cart/items')
-def agregar_carrito(owner_id: str = Query(...), product_id: str = Query(...), quantity: int = Query(default=1), db: Session = Depends(get_session)):
-    item = db.query(CarritoItem).filter(CarritoItem.owner_id == owner_id, CarritoItem.product_id == product_id).first()
+def agregar_carrito(
+    owner_id: str | None = Query(default=None),
+    product_id: str = Query(...),
+    quantity: int = Query(default=1),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    resolved_owner_id = str(owner_id or '').strip()
+    if normalize_role(usuario.role) != 'admin':
+        resolved_owner_id = usuario.usuario_id
+    elif not resolved_owner_id:
+        resolved_owner_id = usuario.usuario_id
+
+    item = db.query(CarritoItem).filter(CarritoItem.owner_id == resolved_owner_id, CarritoItem.product_id == product_id).first()
     qty = max(1, int(quantity))
     if item:
         item.quantity = qty
         item.updated_at = datetime.utcnow()
     else:
-        db.add(CarritoItem(owner_id=owner_id, product_id=product_id, quantity=qty, updated_at=datetime.utcnow()))
+        db.add(CarritoItem(owner_id=resolved_owner_id, product_id=product_id, quantity=qty, updated_at=datetime.utcnow()))
     db.commit()
     return {'status': 'ok'}
 
 
 @app.put('/cart/items/{product_id}')
-def actualizar_carrito(product_id: str, owner_id: str = Query(...), quantity: int = Query(default=1), db: Session = Depends(get_session)):
-    item = db.query(CarritoItem).filter(CarritoItem.owner_id == owner_id, CarritoItem.product_id == product_id).first()
+def actualizar_carrito(
+    product_id: str,
+    owner_id: str | None = Query(default=None),
+    quantity: int = Query(default=1),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    resolved_owner_id = str(owner_id or '').strip()
+    if normalize_role(usuario.role) != 'admin':
+        resolved_owner_id = usuario.usuario_id
+    elif not resolved_owner_id:
+        resolved_owner_id = usuario.usuario_id
+
+    item = db.query(CarritoItem).filter(CarritoItem.owner_id == resolved_owner_id, CarritoItem.product_id == product_id).first()
     if not item:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Item no encontrado')
     qty = int(quantity)
@@ -581,8 +828,19 @@ def actualizar_carrito(product_id: str, owner_id: str = Query(...), quantity: in
 
 
 @app.delete('/cart/items/{product_id}')
-def eliminar_item_carrito(product_id: str, owner_id: str = Query(...), db: Session = Depends(get_session)):
-    item = db.query(CarritoItem).filter(CarritoItem.owner_id == owner_id, CarritoItem.product_id == product_id).first()
+def eliminar_item_carrito(
+    product_id: str,
+    owner_id: str | None = Query(default=None),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    resolved_owner_id = str(owner_id or '').strip()
+    if normalize_role(usuario.role) != 'admin':
+        resolved_owner_id = usuario.usuario_id
+    elif not resolved_owner_id:
+        resolved_owner_id = usuario.usuario_id
+
+    item = db.query(CarritoItem).filter(CarritoItem.owner_id == resolved_owner_id, CarritoItem.product_id == product_id).first()
     if item:
         db.delete(item)
         db.commit()
@@ -590,14 +848,29 @@ def eliminar_item_carrito(product_id: str, owner_id: str = Query(...), db: Sessi
 
 
 @app.delete('/cart')
-def limpiar_carrito(owner_id: str = Query(...), db: Session = Depends(get_session)):
-    db.query(CarritoItem).filter(CarritoItem.owner_id == owner_id).delete()
+def limpiar_carrito(
+    owner_id: str | None = Query(default=None),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    resolved_owner_id = str(owner_id or '').strip()
+    if normalize_role(usuario.role) != 'admin':
+        resolved_owner_id = usuario.usuario_id
+    elif not resolved_owner_id:
+        resolved_owner_id = usuario.usuario_id
+
+    db.query(CarritoItem).filter(CarritoItem.owner_id == resolved_owner_id).delete()
     db.commit()
     return {'status': 'ok'}
 
 
 @app.get('/seller/carts/active')
-def carritos_activos_seller(seller_id: str = Query(...), db: Session = Depends(get_session)):
+def carritos_activos_seller(
+    seller_id: str = Query(...),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('seller', 'admin')),
+):
+    ensure_seller_or_admin_scope(seller_id, usuario)
     carts_map: dict[str, dict] = {}
     items = db.query(CarritoItem).order_by(CarritoItem.updated_at.desc()).all()
     for item in items:
@@ -629,30 +902,70 @@ def carritos_activos_seller(seller_id: str = Query(...), db: Session = Depends(g
 
 
 @app.get('/favorites')
-def listar_favoritos(user_id: str = Query(...), db: Session = Depends(get_session)):
-    items = db.query(Favorito).filter(Favorito.user_id == user_id).all()
+def listar_favoritos(
+    user_id: str | None = Query(default=None),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    resolved_user_id = str(user_id or '').strip()
+    if normalize_role(usuario.role) != 'admin':
+        resolved_user_id = usuario.usuario_id
+    elif not resolved_user_id:
+        resolved_user_id = usuario.usuario_id
+
+    items = db.query(Favorito).filter(Favorito.user_id == resolved_user_id).all()
     return {'status': 'ok', 'favorites': [item.product_id for item in items]}
 
 
 @app.post('/favorites/{product_id}')
-def agregar_favorito(product_id: str, user_id: str = Query(...), db: Session = Depends(get_session)):
-    existing = db.query(Favorito).filter(Favorito.user_id == user_id, Favorito.product_id == product_id).first()
+def agregar_favorito(
+    product_id: str,
+    user_id: str | None = Query(default=None),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    resolved_user_id = str(user_id or '').strip()
+    if normalize_role(usuario.role) != 'admin':
+        resolved_user_id = usuario.usuario_id
+    elif not resolved_user_id:
+        resolved_user_id = usuario.usuario_id
+
+    existing = db.query(Favorito).filter(Favorito.user_id == resolved_user_id, Favorito.product_id == product_id).first()
     if not existing:
-        db.add(Favorito(user_id=user_id, product_id=product_id, created_at=datetime.utcnow()))
+        db.add(Favorito(user_id=resolved_user_id, product_id=product_id, created_at=datetime.utcnow()))
         db.commit()
     return {'status': 'ok'}
 
 
 @app.delete('/favorites/{product_id}')
-def eliminar_favorito(product_id: str, user_id: str = Query(...), db: Session = Depends(get_session)):
-    db.query(Favorito).filter(Favorito.user_id == user_id, Favorito.product_id == product_id).delete()
+def eliminar_favorito(
+    product_id: str,
+    user_id: str | None = Query(default=None),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    resolved_user_id = str(user_id or '').strip()
+    if normalize_role(usuario.role) != 'admin':
+        resolved_user_id = usuario.usuario_id
+    elif not resolved_user_id:
+        resolved_user_id = usuario.usuario_id
+
+    db.query(Favorito).filter(Favorito.user_id == resolved_user_id, Favorito.product_id == product_id).delete()
     db.commit()
     return {'status': 'ok'}
 
 
 @app.post('/reviews')
-def crear_resena(payload: ReviewIn, db: Session = Depends(get_session)):
-    user = db.get(UsuarioApp, payload.user_id)
+def crear_resena(
+    payload: ReviewIn,
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    user_id = payload.user_id
+    if normalize_role(usuario.role) != 'admin':
+        user_id = usuario.usuario_id
+
+    user = db.get(UsuarioApp, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Usuario no encontrado')
     product = db.get(Producto, payload.product_id)
@@ -660,7 +973,7 @@ def crear_resena(payload: ReviewIn, db: Session = Depends(get_session)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
     review = Resena(
         product_id=payload.product_id,
-        user_id=payload.user_id,
+        user_id=user_id,
         user_name=user.nombre,
         rating=int(payload.rating),
         comment=(payload.comment or '').strip(),
@@ -672,13 +985,21 @@ def crear_resena(payload: ReviewIn, db: Session = Depends(get_session)):
 
 
 @app.post('/reports')
-def crear_reporte(payload: ReportIn, db: Session = Depends(get_session)):
-    reporter = db.get(UsuarioApp, payload.reporter_id)
+def crear_reporte(
+    payload: ReportIn,
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    reporter_id = payload.reporter_id
+    if normalize_role(usuario.role) != 'admin':
+        reporter_id = usuario.usuario_id
+
+    reporter = db.get(UsuarioApp, reporter_id)
     if not reporter:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Usuario reportante no encontrado')
     report = Reporte(
         reporte_id=f'rep-{uuid4().hex[:10]}',
-        reporter_id=payload.reporter_id,
+        reporter_id=reporter_id,
         reporter_name=reporter.nombre,
         target_type=payload.target_type,
         target_id=payload.target_id,
@@ -694,7 +1015,11 @@ def crear_reporte(payload: ReportIn, db: Session = Depends(get_session)):
 
 
 @app.get('/reports')
-def listar_reportes(status_value: str | None = Query(default=None, alias='status'), db: Session = Depends(get_session)):
+def listar_reportes(
+    status_value: str | None = Query(default=None, alias='status'),
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
     query = db.query(Reporte)
     if status_value:
         query = query.filter(Reporte.status == status_value)
@@ -703,13 +1028,25 @@ def listar_reportes(status_value: str | None = Query(default=None, alias='status
 
 
 @app.get('/reports/my')
-def mis_reportes(user_id: str = Query(...), db: Session = Depends(get_session)):
+def mis_reportes(
+    user_id: str = Query(...),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+):
+    if normalize_role(usuario.role) != 'admin' and usuario.usuario_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para este usuario')
     list_items = db.query(Reporte).filter(Reporte.reporter_id == user_id).order_by(Reporte.created_at.desc()).all()
     return {'status': 'ok', 'reports': [serialize_reporte(item) for item in list_items]}
 
 
 @app.put('/reports/{report_id}')
-def actualizar_reporte(report_id: str, status_value: str = Query(..., alias='status'), admin_notes: str = Query(default='', alias='admin_notes'), db: Session = Depends(get_session)):
+def actualizar_reporte(
+    report_id: str,
+    status_value: str = Query(..., alias='status'),
+    admin_notes: str = Query(default='', alias='admin_notes'),
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
     report = db.get(Reporte, report_id)
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Reporte no encontrado')
@@ -720,13 +1057,24 @@ def actualizar_reporte(report_id: str, status_value: str = Query(..., alias='sta
 
 
 @app.get('/seller/profile')
-def obtener_profile_seller(seller_id: str = Query(...), db: Session = Depends(get_session)):
+def obtener_profile_seller(
+    seller_id: str = Query(...),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('seller', 'admin')),
+):
+    ensure_seller_or_admin_scope(seller_id, usuario)
     profile = db.get(SellerProfile, seller_id)
     return {'status': 'ok', 'profile': serialize_profile(profile)}
 
 
 @app.put('/seller/profile')
-def actualizar_profile_seller(seller_id: str = Query(...), payload: SellerProfileIn | None = None, db: Session = Depends(get_session)):
+def actualizar_profile_seller(
+    seller_id: str = Query(...),
+    payload: SellerProfileIn | None = None,
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('seller', 'admin')),
+):
+    ensure_seller_or_admin_scope(seller_id, usuario)
     if payload is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Payload requerido')
     user = db.get(UsuarioApp, seller_id)
@@ -751,7 +1099,12 @@ def actualizar_profile_seller(seller_id: str = Query(...), payload: SellerProfil
 
 
 @app.get('/seller/metrics')
-def seller_metrics(seller_id: str = Query(...), db: Session = Depends(get_session)):
+def seller_metrics(
+    seller_id: str = Query(...),
+    db: Session = Depends(get_session),
+    usuario: UsuarioApp = Depends(require_roles('seller', 'admin')),
+):
+    ensure_seller_or_admin_scope(seller_id, usuario)
     seller_products = db.query(Producto).filter(Producto.seller_id == seller_id).all()
     product_ids = [item.producto_id for item in seller_products]
     review_count = db.query(Resena).filter(Resena.product_id.in_(product_ids)).count() if product_ids else 0
@@ -794,7 +1147,12 @@ def obtener_seller(seller_id: str, db: Session = Depends(get_session)):
 
 
 @app.put('/admin/products/{product_id}/status')
-def admin_status_producto(product_id: str, status_value: str = Query(default='approved', alias='status'), db: Session = Depends(get_session)):
+def admin_status_producto(
+    product_id: str,
+    status_value: str = Query(default='approved', alias='status'),
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
     product = db.get(Producto, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
@@ -804,7 +1162,12 @@ def admin_status_producto(product_id: str, status_value: str = Query(default='ap
 
 
 @app.put('/admin/products/{product_id}/verify-local')
-def admin_verify_local(product_id: str, verified: bool = Query(default=True), db: Session = Depends(get_session)):
+def admin_verify_local(
+    product_id: str,
+    verified: bool = Query(default=True),
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
     product = db.get(Producto, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
@@ -815,7 +1178,12 @@ def admin_verify_local(product_id: str, verified: bool = Query(default=True), db
 
 
 @app.put('/admin/products/{product_id}/feature')
-def admin_feature_product(product_id: str, days: int = Query(default=7), db: Session = Depends(get_session)):
+def admin_feature_product(
+    product_id: str,
+    days: int = Query(default=7),
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
     product = db.get(Producto, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
@@ -826,7 +1194,12 @@ def admin_feature_product(product_id: str, days: int = Query(default=7), db: Ses
 
 
 @app.put('/admin/sellers/{seller_id}/status')
-def admin_status_seller(seller_id: str, status_value: str = Query(default='verified', alias='status'), db: Session = Depends(get_session)):
+def admin_status_seller(
+    seller_id: str,
+    status_value: str = Query(default='verified', alias='status'),
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
     seller = db.get(UsuarioApp, seller_id)
     if not seller or seller.role != 'seller':
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Vendedor no encontrado')
@@ -836,7 +1209,12 @@ def admin_status_seller(seller_id: str, status_value: str = Query(default='verif
 
 
 @app.put('/admin/users/{user_id}/status')
-def admin_status_user(user_id: str, status_value: str = Query(default='active', alias='status'), db: Session = Depends(get_session)):
+def admin_status_user(
+    user_id: str,
+    status_value: str = Query(default='active', alias='status'),
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
     user = db.get(UsuarioApp, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Usuario no encontrado')
@@ -846,7 +1224,10 @@ def admin_status_user(user_id: str, status_value: str = Query(default='active', 
 
 
 @app.get('/admin/stats')
-def admin_stats(db: Session = Depends(get_session)):
+def admin_stats(
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
     return {
         'status': 'ok',
         'stats': {
@@ -860,7 +1241,12 @@ def admin_stats(db: Session = Depends(get_session)):
 
 
 @app.get('/admin/users')
-def admin_users(role: str | None = Query(default=None), status_value: str | None = Query(default=None, alias='status'), db: Session = Depends(get_session)):
+def admin_users(
+    role: str | None = Query(default=None),
+    status_value: str | None = Query(default=None, alias='status'),
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
     query = db.query(UsuarioApp)
     if role:
         query = query.filter(UsuarioApp.role == normalize_role(role))
@@ -910,3 +1296,5 @@ def serialize_reporte(report: Reporte) -> dict:
         'admin_notes': report.admin_notes or '',
         'created_at': report.created_at.isoformat() if report.created_at else '',
     }
+
+

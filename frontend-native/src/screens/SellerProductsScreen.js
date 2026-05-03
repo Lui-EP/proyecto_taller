@@ -11,7 +11,7 @@ import { useProducts } from '../context/ProductsContext';
 export default function SellerProductsScreen({ navigation }) {
   const { user } = useSession();
   const { getSellerProducts } = useProducts();
-  const sellerId = user?.id || 'seller-1';
+  const sellerId = user?.id || 'vendedor-1';
   const sellerProducts = getSellerProducts(sellerId);
 
   return (
@@ -75,3 +75,4 @@ const styles = StyleSheet.create({
   price: { color: colors.primary, fontWeight: '800', fontSize: typography.subheading },
   stock: { color: colors.textSoft, fontWeight: '700' },
 });
+

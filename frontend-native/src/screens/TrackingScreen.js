@@ -11,7 +11,6 @@ import {
   formatPrice,
   getOrderStatusMeta,
   getTimelineSteps,
-  pickupStores,
 } from '../data/demoData';
 import {
   buildRegionFromPoints,
@@ -30,10 +29,6 @@ function getDestinationCoords(order) {
   }
   if (isValidCoords({ lat: order?.pickupStoreLat, lng: order?.pickupStoreLng })) {
     return { lat: Number(order.pickupStoreLat), lng: Number(order.pickupStoreLng) };
-  }
-  const fallbackStore = pickupStores.find((store) => store.id === order?.pickupStoreId);
-  if (fallbackStore && isValidCoords(fallbackStore)) {
-    return { lat: Number(fallbackStore.lat), lng: Number(fallbackStore.lng) };
   }
   return null;
 }

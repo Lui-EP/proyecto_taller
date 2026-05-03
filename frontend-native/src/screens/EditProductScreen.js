@@ -123,7 +123,7 @@ export default function EditProductScreen({ route, navigation }) {
     try {
       setSaving(true);
       const payload = {
-        sellerId: user?.id || 'seller-1',
+        sellerId: user?.id || 'vendedor-1',
         sellerName: user?.name || 'Vendedor',
         name: name.trim(),
         category,
@@ -382,3 +382,4 @@ const styles = StyleSheet.create({
   saveButtonText: { color: colors.white, fontWeight: '800', fontSize: typography.body },
   buttonDisabled: { opacity: 0.7 },
 });
+

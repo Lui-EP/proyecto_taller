@@ -1,4 +1,5 @@
 import { getClientesApiBaseUrl } from './productsApi';
+import { buildAuthHeaders } from './httpAuth';
 
 async function request(path, options = {}) {
   let response;
@@ -6,7 +7,7 @@ async function request(path, options = {}) {
     response = await fetch(`${getClientesApiBaseUrl()}${path}`, {
       headers: {
         'Content-Type': 'application/json',
-        ...(options.headers || {}),
+        ...buildAuthHeaders(options.headers || {}),
       },
       ...options,
     });
@@ -49,5 +50,14 @@ export async function loginRequest(email, password) {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
-  return json.user;
+  return {
+    user: json.user || null,
+    token: json.access_token || '',
+    expiresIn: Number(json.expires_in || 0),
+  };
+}
+
+export async function getMeRequest() {
+  const json = await request('/auth/me');
+  return json.user || null;
 }
