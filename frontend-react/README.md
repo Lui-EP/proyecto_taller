@@ -23,8 +23,13 @@ npm install
 Crea `frontend-react/.env.local`:
 
 ```env
+# opcion A (recomendada): una sola URL del gateway/API publica
+VITE_API_URL=http://localhost:8010
+
+# opcion B: URLs separadas (si no usas gateway)
 VITE_CLIENTES_API_URL=http://localhost:8001
 VITE_PEDIDOS_API_URL=http://localhost:8002
+
 VITE_LOCATIONIQ_API_KEY=TU_API_KEY_LOCATIONIQ
 # opcional
 VITE_GOOGLE_MAPS_API_KEY=TU_API_KEY_GOOGLE
@@ -56,11 +61,18 @@ El proyecto ya incluye `vercel.json` para rutas SPA.
 Variables recomendadas en Vercel:
 
 ```env
+# recomendado si expones el gateway:
+VITE_API_URL=https://mercado-local.ddns.net
+
+# alternativa (si expones servicios por separado):
 VITE_CLIENTES_API_URL=https://api-clientes.tu-dominio.com
 VITE_PEDIDOS_API_URL=https://api-pedidos.tu-dominio.com
+
 VITE_LOCATIONIQ_API_KEY=pk_xxx
 VITE_GOOGLE_MAPS_API_KEY=xxx (opcional)
 ```
+
+Importante: si Vercel corre en `https://`, tu backend tambien debe responder por `https://` (si usas `http://` el navegador lo bloqueara por seguridad).
 
 ## 6) Cuentas demo
 

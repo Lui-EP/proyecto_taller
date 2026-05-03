@@ -5,6 +5,7 @@ import { SessionProvider } from './context/SessionContext';
 import App from './App';
 
 import 'leaflet/dist/leaflet.css';
+import './styles/tailwind.css';
 import './styles/common.css';
 import './styles/home.css';
 import './styles/catalog.css';

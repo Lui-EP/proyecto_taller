@@ -1,5 +1,6 @@
 ﻿import { Navigate, Route, Routes } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
+import LandingPage from './pages/LandingPage';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -23,7 +24,8 @@ function AppShell({ children }) {
 export default function App() {
     return (
         <Routes>
-            <Route path="/" element={<AppShell><HomePage /></AppShell>} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/inicio" element={<AppShell><HomePage /></AppShell>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/registro" element={<RegisterPage />} />
             <Route path="/catalogo" element={<AppShell><CatalogPage /></AppShell>} />

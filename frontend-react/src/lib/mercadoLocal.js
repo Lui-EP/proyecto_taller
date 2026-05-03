@@ -1,5 +1,12 @@
-﻿const CLIENTES_API_URL = stripTrailingSlash(requireApiUrl(import.meta.env.VITE_CLIENTES_API_URL, 'VITE_CLIENTES_API_URL'));
-const PEDIDOS_API_URL = stripTrailingSlash(requireApiUrl(import.meta.env.VITE_PEDIDOS_API_URL, 'VITE_PEDIDOS_API_URL'));
+const API_BASE_URL = stripTrailingSlash(String(import.meta.env.VITE_API_URL || '').trim());
+const CLIENTES_API_URL = stripTrailingSlash(requireApiUrl(
+    import.meta.env.VITE_CLIENTES_API_URL || (API_BASE_URL ? `${API_BASE_URL}/api/clientes` : ''),
+    'VITE_CLIENTES_API_URL (o VITE_API_URL)',
+));
+const PEDIDOS_API_URL = stripTrailingSlash(requireApiUrl(
+    import.meta.env.VITE_PEDIDOS_API_URL || (API_BASE_URL ? `${API_BASE_URL}/api/pedidos` : ''),
+    'VITE_PEDIDOS_API_URL (o VITE_API_URL)',
+));
 
 const PRODUCT_IMAGE_BY_KEY = {
     canastas: '/img/productos/canastas.jpg',
@@ -295,7 +302,7 @@ function createMercadoLocal() {
         const user = mercado.AppState?.user || null;
         const token = normalizeText(mercado.AppState?.token, '');
         if (!user || !user.id || !token) {
-            throw new Error('Inicia sesión para continuar');
+            throw new Error('Inicia sesiÃ¯Â¿Â½n para continuar');
         }
         return user;
     }
