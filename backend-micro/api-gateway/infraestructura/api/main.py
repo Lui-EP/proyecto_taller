@@ -44,10 +44,12 @@ app = FastAPI(title='API Gateway MercadoLocal', version='1.0.0')
 raw_origins = os.getenv('ALLOWED_ORIGINS', '*').strip()
 allow_all_origins = raw_origins in {'', '*'}
 allowed_origins = ['*'] if allow_all_origins else [item.strip() for item in raw_origins.split(',') if item.strip()]
+allow_origin_regex = os.getenv('ALLOWED_ORIGIN_REGEX', '').strip() or None
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=not allow_all_origins,
     allow_methods=['*'],
     allow_headers=['*'],
