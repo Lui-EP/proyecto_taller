@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
@@ -83,7 +83,7 @@ export default function RegisterPage() {
     return (
         <main className="auth-page">
             <div className="auth-container">
-                <Link to="/" className="auth-back-link">
+                <Link to="/inicio" className="auth-back-link">
                     <span>←</span>
                     <span>Volver al inicio</span>
                 </Link>

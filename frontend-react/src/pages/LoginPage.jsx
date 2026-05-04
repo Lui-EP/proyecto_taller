@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
@@ -43,7 +43,7 @@ export default function LoginPage() {
     return (
         <main className="auth-page">
             <div className="auth-container">
-                <Link to="/" className="auth-back-link">
+                <Link to="/inicio" className="auth-back-link">
                     <span>←</span>
                     <span>Volver al inicio</span>
                 </Link>
