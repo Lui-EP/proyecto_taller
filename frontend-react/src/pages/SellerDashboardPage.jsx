@@ -315,7 +315,7 @@ export default function SellerDashboardPage() {
                 description: 'Sugerida por vendedor',
             });
             await loadData();
-            mercado.showToast('Categoria sugerida correctamente');
+            window.alert('Solicitud de categoria enviada');
         } catch {
             mercado.showToast('No se pudo sugerir la categoria', 'error');
         }
