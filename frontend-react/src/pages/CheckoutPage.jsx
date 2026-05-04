@@ -1260,6 +1260,10 @@ export default function CheckoutPage() {
             mercado.showToast('Tu carrito esta vacio', 'error');
             return;
         }
+        if (String(customer.phone || '').trim().length !== 10) {
+            mercado.showToast('El telefono debe tener exactamente 10 digitos', 'error');
+            return;
+        }
         if (isPickup && !selectedPickupPoint) {
             mercado.showToast('Selecciona una tienda para recoger', 'error');
             return;
@@ -1382,7 +1386,7 @@ export default function CheckoutPage() {
                         <input className="form-input" type="email" value={customer.email} onChange={(event) => setCustomer((prev) => ({ ...prev, email: event.target.value }))} required />
 
                         <label className="form-label">Telefono</label>
-                        <input className="form-input" value={customer.phone} onChange={(event) => setCustomer((prev) => ({ ...prev, phone: event.target.value }))} required />
+                        <input className="form-input" type="tel" value={customer.phone} onChange={(event) => setCustomer((prev) => ({ ...prev, phone: event.target.value.replace(/\D/g, '').slice(0, 10) }))} pattern="[0-9]{10}" maxLength="10" required />
 
                         <label className="form-label">Metodo de entrega</label>
                         <div className="delivery-method-row">

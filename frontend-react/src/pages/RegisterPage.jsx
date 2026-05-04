@@ -58,6 +58,11 @@ export default function RegisterPage() {
             return;
         }
 
+        if (isSeller && form.phone.trim().length !== 10) {
+            mercado.showToast('El numero de telefono debe tener 10 digitos', 'error');
+            return;
+        }
+
         setLoading(true);
         try {
             const user = await session.register({
@@ -199,7 +204,9 @@ export default function RegisterPage() {
                                         className="form-input"
                                         placeholder="10 dígitos"
                                         value={form.phone}
-                                        onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
+                                        onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                                        pattern="[0-9]{10}"
+                                        maxLength="10"
                                         required={isSeller}
                                     />
                                 </div>
