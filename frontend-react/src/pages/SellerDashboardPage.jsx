@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
@@ -12,7 +12,7 @@ const EMPTY_PRODUCT_FORM = {
     description: '',
     category_id: '',
     price: '',
-    stock: 0,
+    stock: '',
     is_local_handmade: false,
 };
 
@@ -174,7 +174,7 @@ export default function SellerDashboardPage() {
                 description: product.description || '',
                 category_id: product.category_id || '',
                 price: String(product.price || ''),
-                stock: Number(product.stock || 0),
+                stock: product.stock !== undefined ? String(product.stock) : '',
                 is_local_handmade: !!product.is_local_handmade,
             });
             setCurrentProductImages([...(product.images || [])]);
@@ -336,7 +336,7 @@ export default function SellerDashboardPage() {
                 subscription: { plan: 'premium' },
             };
             session.syncState?.();
-            mercado.showToast('Plan actualizado a Premium (pago simulado)');
+            mercado.showToast('Tu solicitud ha sido enviada por favor');
             await loadData();
         } catch {
             mercado.showToast('Error al actualizar plan', 'error');
@@ -848,7 +848,7 @@ export default function SellerDashboardPage() {
                                         type="number"
                                         min="0"
                                         value={productForm.stock}
-                                        onChange={(event) => setProductForm((prev) => ({ ...prev, stock: Number(event.target.value || 0) }))}
+                                        onChange={(event) => setProductForm((prev) => ({ ...prev, stock: event.target.value }))}
                                         required
                                     />
                                 </div>
