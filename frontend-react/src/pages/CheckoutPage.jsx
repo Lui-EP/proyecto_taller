@@ -931,11 +931,15 @@ export default function CheckoutPage() {
 
     useEffect(() => {
         if (!session.user) return;
+        
+        const rawPhone = String(session.user.phone || session.user.seller_profile?.phone || '');
+        const cleanPhone = rawPhone.replace(/\D/g, '').slice(0, 10);
+        
         setCustomer((prev) => ({
             ...prev,
             name: session.user.name || '',
             email: session.user.email || '',
-            phone: session.user.phone || session.user.seller_profile?.phone || '',
+            phone: cleanPhone,
         }));
     }, [session.user]);
 
