@@ -14,8 +14,8 @@ export default function CartPage() {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const loadCart = useCallback(async () => {
-        setLoading(true);
+    const loadCart = useCallback(async (silent = false) => {
+        if (!silent) setLoading(true);
         try {
             const detailed = await mercado.getCartDetailedItems();
             setItems(Array.isArray(detailed) ? detailed : []);
@@ -23,7 +23,7 @@ export default function CartPage() {
             mercado.showToast('No se pudo cargar el carrito', 'error');
             setItems([]);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [mercado]);
 
@@ -37,15 +37,19 @@ export default function CartPage() {
 
         const maxStock = Math.max(1, Number(current.product.stock || 1));
         const next = Math.min(maxStock, Math.max(1, Number(current.quantity || 1) + delta));
+        
+        setItems(prev => prev.map(item => item.product.id === productId ? { ...item, quantity: next, subtotal: next * item.product.price } : item));
+        
         await mercado.updateCartItemQuantity(productId, next);
         session.syncState();
-        await loadCart();
+        await loadCart(true);
     };
 
     const removeItem = async (productId) => {
+        setItems(prev => prev.filter(item => item.product.id !== productId));
         await mercado.removeFromCart(productId);
         session.syncState();
-        await loadCart();
+        await loadCart(true);
     };
 
     const clearCart = async () => {
