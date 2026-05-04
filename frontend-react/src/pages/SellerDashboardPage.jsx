@@ -336,7 +336,7 @@ export default function SellerDashboardPage() {
                 subscription: { plan: 'premium' },
             };
             session.syncState?.();
-            mercado.showToast('Tu solicitud ha sido enviada por favor');
+            window.alert('Tu solicitud ha sido enviada por favor');
             await loadData();
         } catch {
             mercado.showToast('Error al actualizar plan', 'error');
