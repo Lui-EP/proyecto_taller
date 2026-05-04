@@ -1,4 +1,4 @@
-﻿import json
+import json
 import os
 from datetime import datetime
 from uuid import uuid4
@@ -123,11 +123,11 @@ def health():
 def registrar_pedido(
     payload: PedidoIn,
     db: Session = Depends(get_session),
-    claims: dict = Depends(require_roles('buyer', 'admin')),
+    claims: dict = Depends(require_roles('buyer', 'seller', 'admin')),
 ):
     requester_role = str(claims.get('role') or '')
     requester_id = str(claims.get('sub') or '')
-    if requester_role == 'buyer' and payload.customerId != requester_id:
+    if requester_role in ('buyer', 'seller') and payload.customerId != requester_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para crear pedido para otro cliente')
 
     delivery_method = (payload.deliveryMethod or 'delivery').strip().lower()
