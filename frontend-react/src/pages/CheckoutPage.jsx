@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { useSession } from '../context/SessionContext';
@@ -1153,7 +1153,7 @@ export default function CheckoutPage() {
         }
     }, []);
 
-    const subtotal = mercado.getCartSubtotal(items);
+    const subtotal = items.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
     const isPickup = deliveryMethod === 'pickup';
 
     const pickupPoints = useMemo(() => {
