@@ -15,7 +15,7 @@ const REPORT_OPTIONS = [
 export default function ProductPage() {
     const [searchParams] = useSearchParams();
     const productId = searchParams.get('id') || '';
-    const mercado = getMercadoLocal();
+    const mercado = useMemo(() => getMercadoLocal(), []);
     const session = useSession();
     const navigate = useNavigate();
 
@@ -32,7 +32,7 @@ export default function ProductPage() {
         if (!product) return [];
         const fallback = mercado.createPlaceholderImage(product.name || 'Producto');
         return product.images?.length ? product.images : [fallback];
-    }, [product]);
+    }, [product, mercado]);
 
     const isFav = useMemo(() => session.favorites.includes(product?.id), [session.favorites, product?.id]);
 
@@ -66,7 +66,7 @@ export default function ProductPage() {
         return () => {
             cancelled = true;
         };
-    }, [productId]);
+    }, [productId, mercado, session]);
 
     const buyNow = async () => {
         if (!product) return;

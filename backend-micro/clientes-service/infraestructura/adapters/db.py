@@ -1,4 +1,4 @@
-import os
+﻿import os
 import time
 from datetime import datetime
 from typing import Generator
@@ -48,10 +48,10 @@ PRODUCTOS_SEED = [
         'seller_name': 'Artesana Luna',
         'nombre': 'Canastas de palma',
         'categoria': 'artesanias',
-        'categoria_label': 'ArtesanÃ­as',
+        'categoria_label': 'Artesanías',
         'precio': 450,
         'stock': 18,
-        'descripcion': 'Canastas tejidas a mano para cocina, regalo o decoraciÃ³n.',
+        'descripcion': 'Canastas tejidas a mano para cocina, regalo o decoración.',
         'featured': True,
         'local': True,
         'verified': True,
@@ -63,7 +63,7 @@ PRODUCTOS_SEED = [
         'producto_id': 'p-2',
         'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
-        'nombre': 'Miel orgÃ¡nica',
+        'nombre': 'Miel orgánica',
         'categoria': 'alimentos',
         'categoria_label': 'Alimentos',
         'precio': 220,
@@ -97,12 +97,12 @@ PRODUCTOS_SEED = [
         'producto_id': 'p-4',
         'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
-        'nombre': 'CafÃ© molido artesanal',
+        'nombre': 'Café molido artesanal',
         'categoria': 'alimentos',
         'categoria_label': 'Alimentos',
         'precio': 190,
         'stock': 26,
-        'descripcion': 'CafÃ© de tueste medio con aroma intenso y notas dulces.',
+        'descripcion': 'Café de tueste medio con aroma intenso y notas dulces.',
         'featured': True,
         'local': True,
         'verified': True,
@@ -116,7 +116,7 @@ PRODUCTOS_SEED = [
         'seller_name': 'Artesana Luna',
         'nombre': 'Jarro de barro',
         'categoria': 'artesanias',
-        'categoria_label': 'ArtesanÃ­as',
+        'categoria_label': 'Artesanías',
         'precio': 520,
         'stock': 14,
         'descripcion': 'Pieza de barro decorada a mano para servir bebidas o adornar.',
@@ -131,9 +131,9 @@ PRODUCTOS_SEED = [
         'producto_id': 'p-6',
         'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
-        'nombre': 'Molcajete volcÃ¡nico',
+        'nombre': 'Molcajete volcánico',
         'categoria': 'artesanias',
-        'categoria_label': 'ArtesanÃ­as',
+        'categoria_label': 'Artesanías',
         'precio': 640,
         'stock': 6,
         'descripcion': 'Molcajete de piedra listo para salsas y cocina tradicional.',
@@ -148,12 +148,12 @@ PRODUCTOS_SEED = [
         'producto_id': 'p-7',
         'seller_id': 'vendedor-1',
         'seller_name': 'Artesana Luna',
-        'nombre': 'Pulsera de Ã¡mbar',
+        'nombre': 'Pulsera de ámbar',
         'categoria': 'joyeria',
-        'categoria_label': 'JoyerÃ­a',
+        'categoria_label': 'Joyería',
         'precio': 310,
         'stock': 12,
-        'descripcion': 'Pulsera ajustable con cuentas de Ã¡mbar natural.',
+        'descripcion': 'Pulsera ajustable con cuentas de ámbar natural.',
         'featured': True,
         'local': True,
         'verified': True,
@@ -170,7 +170,7 @@ PRODUCTOS_SEED = [
         'categoria_label': 'Textiles',
         'precio': 760,
         'stock': 6,
-        'descripcion': 'Rebozo tejido con detalle tradicional y caÃ­da suave.',
+        'descripcion': 'Rebozo tejido con detalle tradicional y caída suave.',
         'featured': True,
         'local': True,
         'verified': True,
@@ -184,7 +184,7 @@ PRODUCTOS_SEED = [
         'seller_name': 'Artesana Luna',
         'nombre': 'Sombrero charro',
         'categoria': 'artesanias',
-        'categoria_label': 'ArtesanÃ­as',
+        'categoria_label': 'Artesanías',
         'precio': 480,
         'stock': 11,
         'descripcion': 'Sombrero decorativo y festivo con bordado charro.',
@@ -201,10 +201,10 @@ PRODUCTOS_SEED = [
         'seller_name': 'Artesana Luna',
         'nombre': 'Tazas de arcilla',
         'categoria': 'artesanias',
-        'categoria_label': 'ArtesanÃ­as',
+        'categoria_label': 'Artesanías',
         'precio': 340,
         'stock': 19,
-        'descripcion': 'Juego de tazas pintadas a mano con inspiraciÃ³n tradicional.',
+        'descripcion': 'Juego de tazas pintadas a mano con inspiración tradicional.',
         'featured': True,
         'local': True,
         'verified': True,
@@ -222,7 +222,7 @@ USUARIOS_APP_SEED = [
         'password': '123456',
         'role': 'buyer',
         'telefono': '9610000000',
-        'direccion': 'Tuxtla GutiÃ©rrez, Chiapas',
+        'direccion': 'Tuxtla Gutiérrez, Chiapas',
         'activo': True,
     },
     {
@@ -232,7 +232,7 @@ USUARIOS_APP_SEED = [
         'password': '123456',
         'role': 'seller',
         'telefono': '9611111111',
-        'direccion': 'Tuxtla GutiÃ©rrez, Chiapas',
+        'direccion': 'Tuxtla Gutiérrez, Chiapas',
         'activo': True,
     },
     {
@@ -242,7 +242,7 @@ USUARIOS_APP_SEED = [
         'password': '123456',
         'role': 'courier',
         'telefono': '9612222222',
-        'direccion': 'Tuxtla GutiÃ©rrez, Chiapas',
+        'direccion': 'Tuxtla Gutiérrez, Chiapas',
         'activo': True,
     },
     {
@@ -252,7 +252,7 @@ USUARIOS_APP_SEED = [
         'password': '123456',
         'role': 'admin',
         'telefono': '9613333333',
-        'direccion': 'Tuxtla GutiÃ©rrez, Chiapas',
+        'direccion': 'Tuxtla Gutiérrez, Chiapas',
         'activo': True,
     },
 ]
@@ -486,6 +486,7 @@ def get_session() -> Generator:
         yield db
     finally:
         db.close()
+
 
 
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
@@ -7,14 +7,14 @@ import SafeImage from '../components/SafeImage';
 import PageLoader from '../components/PageLoader';
 
 export default function CartPage() {
-    const mercado = getMercadoLocal();
+    const mercado = useMemo(() => getMercadoLocal(), []);
     const session = useSession();
     const navigate = useNavigate();
 
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    const loadCart = async () => {
+    const loadCart = useCallback(async () => {
         setLoading(true);
         try {
             const detailed = await mercado.getCartDetailedItems();
@@ -25,11 +25,11 @@ export default function CartPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [mercado]);
 
     useEffect(() => {
         void loadCart();
-    }, []);
+    }, [loadCart]);
 
     const changeQty = async (productId, delta) => {
         const current = items.find((item) => item.product.id === productId);

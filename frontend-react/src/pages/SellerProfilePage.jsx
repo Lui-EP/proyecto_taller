@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import PageLoader from '../components/PageLoader';
@@ -7,7 +7,7 @@ import { getMercadoLocal } from '../lib/mercadoLocal';
 export default function SellerProfilePage() {
     const [searchParams] = useSearchParams();
     const sellerId = searchParams.get('id') || 'u-seller';
-    const mercado = getMercadoLocal();
+    const mercado = useMemo(() => getMercadoLocal(), []);
 
     const [loading, setLoading] = useState(true);
     const [seller, setSeller] = useState(null);
@@ -39,12 +39,12 @@ export default function SellerProfilePage() {
             }
         }
 
-        loadSeller();
+        void loadSeller();
 
         return () => {
             cancelled = true;
         };
-    }, [sellerId]);
+    }, [sellerId, mercado]);
 
     if (loading) {
         return <PageLoader text="Cargando vendedor..." />;

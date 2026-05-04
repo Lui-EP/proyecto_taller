@@ -74,7 +74,7 @@ function parseOptionalPrice(value) {
 }
 
 export default function CatalogPage() {
-    const mercado = getMercadoLocal();
+    const mercado = useMemo(() => getMercadoLocal(), []);
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [categories, setCategories] = useState([]);
@@ -93,7 +93,7 @@ export default function CatalogPage() {
         mercado.CategoriesAPI.getAll().then((list) => setCategories(list || [])).catch(() => {
             mercado.showToast('No se pudieron cargar categorias', 'error');
         });
-    }, []);
+    }, [mercado]);
 
     useEffect(() => {
         const nextFilters = buildFiltersFromSearchParams(searchParams);
@@ -182,7 +182,7 @@ export default function CatalogPage() {
         return () => {
             cancelled = true;
         };
-    }, [filters]);
+    }, [filters, mercado, setSearchParams]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -236,7 +236,7 @@ export default function CatalogPage() {
         if (filters.seller_verified) list.push({ key: 'seller_verified', label: 'Vendedor verificado' });
 
         return list;
-    }, [filters, categories]);
+    }, [filters, categories, mercado]);
 
     const totalPages = Math.max(1, Math.ceil(total / filters.limit));
     const currentPage = Math.floor(filters.skip / filters.limit) + 1;

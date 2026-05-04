@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import PageLoader from '../components/PageLoader';
@@ -7,12 +7,12 @@ import { getMercadoLocal } from '../lib/mercadoLocal';
 
 export default function HistoryPage() {
     const session = useSession();
-    const mercado = getMercadoLocal();
+    const mercado = useMemo(() => getMercadoLocal(), []);
 
     const [loading, setLoading] = useState(true);
     const [products, setProducts] = useState([]);
 
-    const loadHistory = async () => {
+    const loadHistory = useCallback(async () => {
         setLoading(true);
         try {
             const list = await mercado.apiRequest('/history');
@@ -23,15 +23,15 @@ export default function HistoryPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [mercado]);
 
     useEffect(() => {
         if (!session.token) {
             setLoading(false);
             return;
         }
-        loadHistory();
-    }, [session.token]);
+        void loadHistory();
+    }, [session.token, loadHistory]);
 
     if (loading) {
         return <PageLoader text="Cargando historial..." />;

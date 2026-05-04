@@ -1,4 +1,4 @@
-const API_BASE_URL = stripTrailingSlash(String(import.meta.env.VITE_API_URL || '').trim());
+﻿const API_BASE_URL = stripTrailingSlash(String(import.meta.env.VITE_API_URL || '').trim());
 const CLIENTES_API_URL = stripTrailingSlash(requireApiUrl(
     import.meta.env.VITE_CLIENTES_API_URL || (API_BASE_URL ? `${API_BASE_URL}/api/clientes` : ''),
     'VITE_CLIENTES_API_URL (o VITE_API_URL)',
@@ -45,6 +45,26 @@ function toSafeNumber(value, fallback = 0) {
 
 function normalizeText(value, fallback = '') {
     return String(value ?? fallback).trim();
+}
+
+function normalizeAuthEmail(value = '') {
+    const normalized = normalizeText(value, '').toLowerCase();
+    return normalized.endsWith('@mercadolocal.local')
+        ? normalized.replace('@mercadolocal.local', '@mercadolocal.mx')
+        : normalized;
+}
+
+function extractApiErrorMessage(payload, fallback = 'Error de validación') {
+    if (!payload) return fallback;
+    if (typeof payload === 'string') return payload;
+    if (typeof payload.detail === 'string') return payload.detail;
+    if (Array.isArray(payload.detail) && payload.detail.length > 0) {
+        const first = payload.detail[0];
+        if (typeof first === 'string') return first;
+        if (first?.msg) return String(first.msg);
+    }
+    if (typeof payload.message === 'string' && payload.message.trim()) return payload.message;
+    return fallback;
 }
 
 function normalizeRemoteRole(role = '') {
@@ -285,7 +305,7 @@ function createMercadoLocal() {
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-            throw new Error(payload?.detail || payload?.message || `Error HTTP ${response.status}`);
+            throw new Error(extractApiErrorMessage(payload, `Error HTTP ${response.status}`));
         }
         return payload;
     }
@@ -302,7 +322,7 @@ function createMercadoLocal() {
         const user = mercado.AppState?.user || null;
         const token = normalizeText(mercado.AppState?.token, '');
         if (!user || !user.id || !token) {
-            throw new Error('Inicia sesiÃ¯Â¿Â½n para continuar');
+            throw new Error('Inicia sesión para continuar');
         }
         return user;
     }
@@ -360,7 +380,7 @@ function createMercadoLocal() {
     mercado.AuthAPI.login = async (email, password) => {
         const payload = await fetchJson(CLIENTES_API_URL, '/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ email: normalizeText(email, '').toLowerCase(), password: String(password || '') }),
+            body: JSON.stringify({ email: normalizeAuthEmail(email), password: String(password || '') }),
         });
         const user = normalizeRemoteUser(payload?.user || {});
         const token = normalizeText(payload?.access_token, '');
@@ -379,7 +399,7 @@ function createMercadoLocal() {
         const payload = await fetchJson(CLIENTES_API_URL, '/auth/register', {
             method: 'POST',
             body: JSON.stringify({
-                email: normalizeText(email, '').toLowerCase(),
+                email: normalizeAuthEmail(email),
                 password: String(password || ''),
                 name: normalizeText(name, ''),
                 role: normalizeRemoteRole(role),
@@ -872,4 +892,6 @@ export function snapshotState() {
 export function getCartCount(cart = []) {
     return cart.reduce((sum, item) => sum + Math.max(0, Number(item?.quantity || 0)), 0);
 }
+
+
 

@@ -53,7 +53,7 @@ function buildHeroShowcaseProducts(featured, all, maxItems = 12) {
 }
 
 export default function HomePage() {
-    const mercado = getMercadoLocal();
+    const mercado = useMemo(() => getMercadoLocal(), []);
 
     const [categories, setCategories] = useState([]);
     const [heroProducts, setHeroProducts] = useState([]);
@@ -103,7 +103,7 @@ export default function HomePage() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [mercado]);
 
     const applyHeroCarouselTransform = useCallback(() => {
         const strip = stripRef.current;
@@ -524,3 +524,4 @@ export default function HomePage() {
         </div>
     );
 }
+

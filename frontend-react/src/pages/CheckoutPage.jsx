@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import L from 'leaflet';
 import { useSession } from '../context/SessionContext';
@@ -102,7 +102,7 @@ const LOCAL_CHIAPAS_OVERRIDES = [
 ];
 
 export default function CheckoutPage() {
-    const mercado = getMercadoLocal();
+    const mercado = useMemo(() => getMercadoLocal(), []);
     const session = useSession();
     const navigate = useNavigate();
 
@@ -140,6 +140,8 @@ export default function CheckoutPage() {
     const googleMapsRef = useRef(null);
     const googleAutocompleteRef = useRef(null);
     const googlePlacesServiceRef = useRef(null);
+    const searchAddressLocationRef = useRef(null);
+    const scheduleGeoDetailsUpdateRef = useRef(null);
 
     const extractAddressZones = (address) => {
         const addr = address || {};
@@ -861,6 +863,9 @@ export default function CheckoutPage() {
         }, 420);
     };
 
+    searchAddressLocationRef.current = searchAddressLocation;
+    scheduleGeoDetailsUpdateRef.current = scheduleGeoDetailsUpdate;
+
     const applyAddressSuggestion = async (suggestion) => {
         let resolved = suggestion;
         if (suggestion?.source === 'google' && suggestion?.placeId) {
@@ -907,7 +912,7 @@ export default function CheckoutPage() {
         mercado.showToast('Sugerencia aplicada');
     };
 
-    const loadCart = async () => {
+    const loadCart = useCallback(async () => {
         setLoading(true);
         try {
             const list = await mercado.getCartDetailedItems();
@@ -918,11 +923,11 @@ export default function CheckoutPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [mercado]);
 
     useEffect(() => {
-        loadCart();
-    }, []);
+        void loadCart();
+    }, [loadCart]);
 
     useEffect(() => {
         if (!session.user) return;
@@ -1018,7 +1023,12 @@ export default function CheckoutPage() {
                     }
                 }
 
-                const result = await searchAddressLocation(rawAddress);
+                const searchFn = searchAddressLocationRef.current;
+                if (!searchFn) {
+                    setLocationStatus('idle');
+                    return;
+                }
+                const result = await searchFn(rawAddress);
                 if (manualAddressRequestIdRef.current !== requestId) return;
 
                 const best = result.best;
@@ -1092,7 +1102,7 @@ export default function CheckoutPage() {
 
                 marker.setLatLng([nextCoords.lat, nextCoords.lng]);
                 setCustomerLocation(nextCoords);
-                scheduleGeoDetailsUpdate(nextCoords);
+                scheduleGeoDetailsUpdateRef.current?.(nextCoords);
                 animateCheckoutPin();
             });
 
@@ -1510,6 +1520,7 @@ export default function CheckoutPage() {
         </div>
     );
 }
+
 
 
 

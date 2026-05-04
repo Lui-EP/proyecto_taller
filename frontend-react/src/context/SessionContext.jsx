@@ -1,5 +1,5 @@
 ﻿/* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ensureLegacySession, getMercadoLocal, snapshotState, getCartCount } from '../lib/mercadoLocal';
 
 const SessionContext = createContext(null);
@@ -16,9 +16,9 @@ export function SessionProvider({ children }) {
     });
     const [ready, setReady] = useState(false);
 
-    const syncState = () => {
+    const syncState = useCallback(() => {
         setState(snapshotState());
-    };
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -43,9 +43,9 @@ export function SessionProvider({ children }) {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [syncState]);
 
-    const login = async (email, password) => {
+    const login = useCallback(async (email, password) => {
         const mercado = getMercadoLocal();
         const result = await mercado.AuthAPI.login(email, password);
         mercado.AppState.token = result.token;
@@ -55,9 +55,9 @@ export function SessionProvider({ children }) {
         }
         syncState();
         return result.user;
-    };
+    }, [syncState]);
 
-    const register = async (payload) => {
+    const register = useCallback(async (payload) => {
         const mercado = getMercadoLocal();
         const result = await mercado.AuthAPI.register(
             payload.email,
@@ -78,9 +78,9 @@ export function SessionProvider({ children }) {
         }
         syncState();
         return result.user;
-    };
+    }, [syncState]);
 
-    const logout = () => {
+    const logout = useCallback(() => {
         const mercado = getMercadoLocal();
         mercado.AppState.token = null;
         mercado.AppState.user = null;
@@ -88,7 +88,7 @@ export function SessionProvider({ children }) {
             mercado.syncCartStateForUser(null);
         }
         syncState();
-    };
+    }, [syncState]);
 
     const value = useMemo(() => ({
         ...state,
@@ -98,7 +98,7 @@ export function SessionProvider({ children }) {
         login,
         register,
         logout,
-    }), [state, ready]);
+    }), [state, ready, syncState, login, register, logout]);
 
     return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

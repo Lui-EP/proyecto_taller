@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import PageLoader from '../components/PageLoader';
@@ -7,11 +7,11 @@ import { getMercadoLocal } from '../lib/mercadoLocal';
 
 export default function FavoritesPage() {
     const session = useSession();
-    const mercado = getMercadoLocal();
+    const mercado = useMemo(() => getMercadoLocal(), []);
     const [loading, setLoading] = useState(true);
     const [products, setProducts] = useState([]);
 
-    const loadFavorites = async () => {
+    const loadFavorites = useCallback(async () => {
         setLoading(true);
         try {
             const list = await mercado.FavoritesAPI.getAll();
@@ -24,15 +24,15 @@ export default function FavoritesPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [mercado, session]);
 
     useEffect(() => {
         if (!session.token) {
             setLoading(false);
             return;
         }
-        loadFavorites();
-    }, [session.token]);
+        void loadFavorites();
+    }, [session.token, loadFavorites]);
 
     if (!session.token) {
         return (
