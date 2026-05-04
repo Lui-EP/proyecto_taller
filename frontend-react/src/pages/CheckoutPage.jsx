@@ -1301,6 +1301,8 @@ export default function CheckoutPage() {
             await mercado.clearCart();
             session.syncState();
 
+            window.alert('Tu solicitud ha sido enviada por favor');
+
             const params = new URLSearchParams({ id: order.id });
             if (order.guest_token) params.set('token', order.guest_token);
             navigate(`/seguimiento-cliente?${params.toString()}`);
