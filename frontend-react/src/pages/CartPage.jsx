@@ -54,7 +54,7 @@ export default function CartPage() {
         await loadCart();
     };
 
-    const subtotal = mercado.getCartSubtotal(items);
+    const subtotal = items.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
     const itemsCount = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
     if (loading) {
