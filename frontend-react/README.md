@@ -58,11 +58,22 @@ npm run preview
 
 El proyecto ya incluye `vercel.json` para rutas SPA.
 
+Configuracion recomendada (2 proyectos separados):
+
+1. Landing publica (repo `proyecto_taller_landingpage`)
+   - `VITE_API_URL=https://mercado-local.ddns.net`
+   - `VITE_APP_URL=https://TU-WEB-APP.vercel.app`
+2. Web app principal (este repo, carpeta `frontend-react`)
+   - `VITE_API_URL=https://mercado-local.ddns.net`
+   - `VITE_CLIENTES_API_URL=https://mercado-local.ddns.net/api/clientes`
+   - `VITE_PEDIDOS_API_URL=https://mercado-local.ddns.net/api/pedidos`
+
 Variables recomendadas en Vercel:
 
 ```env
 # recomendado si expones el gateway:
 VITE_API_URL=https://mercado-local.ddns.net
+VITE_APP_URL=https://TU-WEB-APP.vercel.app
 
 # alternativa (si expones servicios por separado):
 VITE_CLIENTES_API_URL=https://api-clientes.tu-dominio.com
@@ -73,6 +84,15 @@ VITE_GOOGLE_MAPS_API_KEY=xxx (opcional)
 ```
 
 Importante: si Vercel corre en `https://`, tu backend tambien debe responder por `https://` (si usas `http://` el navegador lo bloqueara por seguridad).
+
+Validacion rapida despues de deploy:
+
+1. Abrir landing y hacer click en `Explorar Plataforma`:
+   - Debe abrir `https://TU-WEB-APP.vercel.app/inicio` directo.
+2. Abrir `https://mercado-local.ddns.net/health`:
+   - Debe responder `ok`.
+3. En web app, abrir catalogo:
+   - Deben cargar productos e imagenes sin errores CORS.
 
 ## 6) Cuentas demo
 
