@@ -29,6 +29,14 @@ EXPO_PUBLIC_PEDIDOS_API_URL=http://192.168.1.88:8002
 EXPO_PUBLIC_LOCATIONIQ_API_KEY=pk.tu_api_publica_aqui
 ```
 
+Si ya usas backend en AWS, puedes dejarlo directo asi:
+
+```env
+EXPO_PUBLIC_CLIENTES_API_URL=https://mercado-local.ddns.net/api/clientes
+EXPO_PUBLIC_PEDIDOS_API_URL=https://mercado-local.ddns.net/api/pedidos
+EXPO_PUBLIC_LOCATIONIQ_API_KEY=pk.tu_api_publica_aqui
+```
+
 Importante:
 
 - No uses `localhost` en movil.
