@@ -19,9 +19,9 @@ const DEFAULT_FILTERS = {
 };
 
 const SORT_OPTIONS = [
-    { value: 'created_at', label: 'Mas recientes' },
+    { value: 'created_at', label: 'Más recientes' },
     { value: 'price', label: 'Menor precio' },
-    { value: 'views', label: 'Mas vistos' },
+    { value: 'views', label: 'Más vistos' },
 ];
 
 function buildFiltersFromSearchParams(searchParams) {
@@ -91,7 +91,7 @@ export default function CatalogPage() {
 
     useEffect(() => {
         mercado.CategoriesAPI.getAll().then((list) => setCategories(list || [])).catch(() => {
-            mercado.showToast('No se pudieron cargar categorias', 'error');
+            mercado.showToast('No se pudieron cargar categorías', 'error');
         });
     }, [mercado]);
 
@@ -221,12 +221,12 @@ export default function CatalogPage() {
         const list = [];
         const categoryName = categories.find((category) => category.id === filters.category_id)?.name;
 
-        if (filters.search) list.push({ key: 'search', label: `Busqueda: ${filters.search}` });
-        if (filters.category_id) list.push({ key: 'category_id', label: `Categoria: ${categoryName || filters.category_id}` });
+        if (filters.search) list.push({ key: 'search', label: `Búsqueda: ${filters.search}` });
+        if (filters.category_id) list.push({ key: 'category_id', label: `Categoría: ${categoryName || filters.category_id}` });
         const minPrice = parseOptionalPrice(filters.min_price);
         const maxPrice = parseOptionalPrice(filters.max_price);
-        if (minPrice !== null) list.push({ key: 'min_price', label: `Precio min: ${mercado.formatPrice(minPrice)}` });
-        if (maxPrice !== null) list.push({ key: 'max_price', label: `Precio max: ${mercado.formatPrice(maxPrice)}` });
+        if (minPrice !== null) list.push({ key: 'min_price', label: `Precio mín: ${mercado.formatPrice(minPrice)}` });
+        if (maxPrice !== null) list.push({ key: 'max_price', label: `Precio máx: ${mercado.formatPrice(maxPrice)}` });
         if (filters.is_local_handmade) list.push({ key: 'is_local_handmade', label: 'Local/Artesanal' });
         if (filters.is_featured) list.push({ key: 'is_featured', label: 'Destacados' });
         if (filters.availability !== 'all') {
@@ -270,7 +270,7 @@ export default function CatalogPage() {
     return (
         <main className="catalog-page">
             <div className="container">
-                <section className="catalog-mobile-shell" aria-label="Catalogo movil">
+                <section className="catalog-mobile-shell" aria-label="Catálogo móvil">
                     <div className="catalog-mobile-topbar">
                         <button
                             type="button"
@@ -282,7 +282,7 @@ export default function CatalogPage() {
                         </button>
                     </div>
 
-                    <div className="catalog-mobile-chip-row" role="navigation" aria-label="Categorias rapidas">
+                    <div className="catalog-mobile-chip-row" role="navigation" aria-label="Categorías rápidas">
                         {mobileCategoryChips.map((category) => (
                             <button
                                 key={category.id || 'all'}
@@ -295,7 +295,7 @@ export default function CatalogPage() {
                         ))}
                     </div>
 
-                    <div className="catalog-mobile-chip-row" role="navigation" aria-label="Filtros rapidos">
+                    <div className="catalog-mobile-chip-row" role="navigation" aria-label="Filtros rápidos">
                         <button
                             type="button"
                             className={`catalog-mobile-chip ${filters.is_local_handmade ? 'active' : ''}`}
@@ -328,8 +328,8 @@ export default function CatalogPage() {
                 </section>
 
                 <div className="catalog-header">
-                    <h1 className="catalog-title">Catalogo de productos</h1>
-                    <p className="catalog-description">Compra local con informacion clara de stock y vendedor.</p>
+                    <h1 className="catalog-title">Catálogo de productos</h1>
+                    <p className="catalog-description">Compra local con información clara de stock y vendedor.</p>
                 </div>
 
                 <div className="search-bar">
@@ -378,13 +378,13 @@ export default function CatalogPage() {
                             </div>
 
                             <div className="filter-section">
-                                <label className="filter-label">Categoria</label>
+                                <label className="filter-label">Categoría</label>
                                 <select
                                     className="filter-select"
                                     value={filters.category_id}
                                     onChange={(event) => setFilters((prev) => ({ ...prev, category_id: event.target.value, skip: 0 }))}
                                 >
-                                    <option value="">Todas las categorias</option>
+                                    <option value="">Todas las categorías</option>
                                     {categories.map((category) => (
                                         <option key={category.id} value={category.id}>{category.name}</option>
                                     ))}
@@ -395,31 +395,31 @@ export default function CatalogPage() {
                                 <label className="filter-label">Rango de precio</label>
                                 <div className="price-input-grid">
                                     <div className="price-input-item">
-                                        <span>Minimo</span>
+                                        <span>Mínimo</span>
                                         <input
                                             type="number"
                                             min="0"
                                             step="1"
                                             className="filter-select"
-                                            placeholder="Sin minimo"
+                                            placeholder="Sin mínimo"
                                             value={filters.min_price}
                                             onChange={(event) => setFilters((prev) => ({ ...prev, min_price: toOptionalPrice(event.target.value), skip: 0 }))}
                                         />
                                     </div>
                                     <div className="price-input-item">
-                                        <span>Maximo</span>
+                                        <span>Máximo</span>
                                         <input
                                             type="number"
                                             min="0"
                                             step="1"
                                             className="filter-select"
-                                            placeholder="Sin maximo"
+                                            placeholder="Sin máximo"
                                             value={filters.max_price}
                                             onChange={(event) => setFilters((prev) => ({ ...prev, max_price: toOptionalPrice(event.target.value), skip: 0 }))}
                                         />
                                     </div>
                                 </div>
-                                <div className="price-range-display">Dejalos vacios para no limitar por precio.</div>
+                                <div className="price-range-display">Déjalos vacíos para no limitar por precio.</div>
                             </div>
 
                             <div className="filter-section">
@@ -522,7 +522,7 @@ export default function CatalogPage() {
                                 <div className="empty-state grid-full">
                                     <div className="empty-state-icon">{'\u{1F50D}'}</div>
                                     <h3 className="empty-state-title">No se encontraron productos</h3>
-                                    <p className="empty-state-description">Intenta ajustar los filtros o realizar otra busqueda.</p>
+                                    <p className="empty-state-description">Intenta ajustar los filtros o realizar otra búsqueda.</p>
                                     <button className="btn btn-primary" onClick={clearFilters}>Limpiar filtros</button>
                                 </div>
                             )}
@@ -532,7 +532,7 @@ export default function CatalogPage() {
                             {totalPages > 1 ? (
                                 <>
                                     {currentPage > 1 ? <button className="btn btn-secondary btn-sm" onClick={() => goToPage(currentPage - 1)}>{'\u2190'} Anterior</button> : null}
-                                    <span className="pagination-info">Pagina {currentPage} de {totalPages}</span>
+                                    <span className="pagination-info">Página {currentPage} de {totalPages}</span>
                                     {currentPage < totalPages ? <button className="btn btn-secondary btn-sm" onClick={() => goToPage(currentPage + 1)}>Siguiente {'\u2192'}</button> : null}
                                 </>
                             ) : null}

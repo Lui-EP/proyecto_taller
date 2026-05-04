@@ -1,4 +1,4 @@
-﻿import { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenContainer from '../components/ScreenContainer';
@@ -9,7 +9,8 @@ import { colors, radius, shadows, spacing, typography } from '../theme';
 import { useSession } from '../context/SessionContext';
 import { useCart } from '../context/CartContext';
 import { useOrders } from '../context/OrdersContext';
-import { getOrderStatusMeta } from '../data/demoData';
+import { getOrderStatusMeta } from '../data/utils';
+import LoginScreen from './LoginScreen';
 
 export default function ProfileScreen({ navigation }) {
   const { user, logout, refreshUsers } = useSession();
@@ -31,19 +32,7 @@ export default function ProfileScreen({ navigation }) {
   }, [refreshOrders, refreshUsers]);
 
   if (!user) {
-    return (
-      <ScreenContainer onRefresh={handleRefresh} refreshing={refreshing}>
-        <FadeInView>
-          <View style={styles.heroCard}>
-            <Text style={styles.heroTitle}>Entrar a MercadoLocal móvil</Text>
-            <Text style={styles.heroText}>Puedes probar la app con cuentas demo de cliente, vendedor, admin y repartidor.</Text>
-            <MotionPressable style={styles.primaryBtn} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.primaryBtnText}>Elegir cuenta demo</Text>
-            </MotionPressable>
-          </View>
-        </FadeInView>
-      </ScreenContainer>
-    );
+    return <LoginScreen navigation={navigation} isEmbedded />;
   }
 
   return (

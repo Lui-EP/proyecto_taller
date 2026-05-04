@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import ProductCard from '../components/ProductCard';
@@ -12,7 +12,7 @@ import { useCart } from '../context/CartContext';
 import { useSession } from '../context/SessionContext';
 import { useOrders } from '../context/OrdersContext';
 import { useProducts } from '../context/ProductsContext';
-import { getOrderStatusMeta } from '../data/demoData';
+import { getOrderStatusMeta } from '../data/utils';
 
 const FEATURED_CARD_WIDTH = 252;
 const FEATURED_CARD_GAP = spacing.md;
@@ -84,8 +84,8 @@ export default function HomeScreen({ navigation }) {
         <>
           <FadeInView>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>MercadoLocal</Text>
-              <Text style={styles.sectionText}>Explora productos locales, artesanales y listos para compra desde el celular.</Text>
+              <Text style={styles.sectionTitle}>Nuestra Selección</Text>
+              <Text style={styles.sectionText}>Explora los mejores productos locales y artesanales, listos para llegar a tu puerta.</Text>
             </View>
           </FadeInView>
 
@@ -107,7 +107,7 @@ export default function HomeScreen({ navigation }) {
           <FadeInView delay={120}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Categorías</Text>
-              <Text style={styles.sectionText}>Misma línea artesanal, pero pensada para tocar y navegar rápido.</Text>
+              <Text style={styles.sectionText}>Encuentra fácilmente lo que buscas explorando por secciones.</Text>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRow}>
               {categories.filter((item) => item.id !== 'all').map((category) => (
@@ -128,7 +128,7 @@ export default function HomeScreen({ navigation }) {
           <FadeInView delay={180}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Destacados</Text>
-              <Text style={styles.sectionText}>Ya con fotos reales y tarjetas más cercanas a tu catálogo web.</Text>
+              <Text style={styles.sectionText}>Los productos más populares y recomendados de la semana.</Text>
             </View>
             <ScrollView
               ref={featuredScrollRef}

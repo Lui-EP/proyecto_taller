@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,7 +15,7 @@ import NativeLocationMap from '../components/NativeLocationMap';
 import { useCart } from '../context/CartContext';
 import { useOrders } from '../context/OrdersContext';
 import { useSession } from '../context/SessionContext';
-import { formatPrice } from '../data/demoData';
+import { formatPrice } from '../data/utils';
 import { listPickupStores } from '../lib/ordersApi';
 import { useForegroundLocation } from '../hooks/useForegroundLocation';
 import {
@@ -435,8 +435,8 @@ export default function CheckoutScreen({ navigation }) {
                   </Text>
                   <Text style={styles.locationStatusText}>
                     {hasLocationIqKey()
-                      ? 'La direccion se traduce a colonia, fraccionamiento y mapa.'
-                      : 'Configura LocationIQ para mejorar el detalle de direccion en el mapa.'}
+                      ? 'La dirección se traduce a colonia, fraccionamiento y mapa.'
+                      : 'Configura LocationIQ para mejorar el detalle de dirección en el mapa.'}
                   </Text>
                 </View>
               </View>

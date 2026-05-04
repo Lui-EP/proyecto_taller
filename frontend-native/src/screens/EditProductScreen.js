@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert, Image, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import ScreenContainer from '../components/ScreenContainer';
@@ -122,8 +122,9 @@ export default function EditProductScreen({ route, navigation }) {
 
     try {
       setSaving(true);
+      if (!user?.id) throw new Error('Inicia sesión para crear o editar productos');
       const payload = {
-        sellerId: user?.id || 'vendedor-1',
+        sellerId: user.id,
         sellerName: user?.name || 'Vendedor',
         name: name.trim(),
         category,

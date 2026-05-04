@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, LayoutAnimation, Linking, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,7 +7,7 @@ import FadeInView from '../components/FadeInView';
 import MotionPressable from '../components/MotionPressable';
 import NativeLocationMap from '../components/NativeLocationMap';
 import StatusPill from '../components/StatusPill';
-import { formatPrice, getOrderStatusMeta } from '../data/demoData';
+import { formatPrice, getOrderStatusMeta } from '../data/utils';
 import {
   buildRegionFromPoints,
   buildStraightLineRoute,
@@ -291,7 +291,7 @@ export default function CourierDashboardScreen({ navigation }) {
 
   const openExternalRoute = async (provider = 'google') => {
     if (!selectedDestination) {
-      Alert.alert('Ruta', 'Selecciona un pedido con direccion valida.');
+      Alert.alert('Ruta', 'Selecciona un pedido con dirección válida.');
       return;
     }
 

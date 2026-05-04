@@ -57,6 +57,18 @@ export async function loginRequest(email, password) {
   };
 }
 
+export async function registerRequest(payload) {
+  const json = await request('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  return {
+    user: json.user || null,
+    token: json.access_token || '',
+    expiresIn: Number(json.expires_in || 0),
+  };
+}
+
 export async function getMeRequest() {
   const json = await request('/auth/me');
   return json.user || null;

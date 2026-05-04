@@ -1,4 +1,4 @@
-﻿import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { LayoutAnimation, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,7 +9,7 @@ import StatusPill from '../components/StatusPill';
 import { colors, gradients, radius, shadows, spacing, typography } from '../theme';
 import { useSession } from '../context/SessionContext';
 import { useOrders } from '../context/OrdersContext';
-import { formatPrice, getOrderStatusMeta, sortOrdersByDate } from '../data/demoData';
+import { formatPrice, getOrderStatusMeta, sortOrdersByDate } from '../data/utils';
 import { hapticSelection } from '../lib/haptics';
 
 const filterOptions = [

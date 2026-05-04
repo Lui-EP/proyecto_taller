@@ -10,9 +10,19 @@ import {
 const ProductsContext = createContext(null);
 
 function normalizeCategory(category = {}) {
+  const labelLower = String(category.name || category.label || '').toLowerCase();
+  let defaultIcon = 'cube-outline';
+  if (labelLower.includes('artesan')) defaultIcon = 'color-palette-outline';
+  else if (labelLower.includes('ropa') || labelLower.includes('textil')) defaultIcon = 'shirt-outline';
+  else if (labelLower.includes('comida') || labelLower.includes('alimento') || labelLower.includes('dulce')) defaultIcon = 'restaurant-outline';
+  else if (labelLower.includes('bebida') || labelLower.includes('cafe') || labelLower.includes('café')) defaultIcon = 'cafe-outline';
+  else if (labelLower.includes('barro') || labelLower.includes('ceramic')) defaultIcon = 'color-fill-outline';
+
   return {
     id: String(category.id || '').trim(),
     label: String(category.name || category.label || 'General').trim() || 'General',
+    icon: category.icon || defaultIcon,
+    accent: category.accent || '#fff0da',
   };
 }
 

@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,7 +6,7 @@ import ScreenContainer from '../components/ScreenContainer';
 import FadeInView from '../components/FadeInView';
 import MotionPressable from '../components/MotionPressable';
 import StatusPill from '../components/StatusPill';
-import { formatPrice, getOrderStatusMeta } from '../data/demoData';
+import { formatPrice, getOrderStatusMeta } from '../data/utils';
 import { colors, gradients, radius, shadows, spacing, typography } from '../theme';
 import { useSession } from '../context/SessionContext';
 import { useOrders } from '../context/OrdersContext';
@@ -19,7 +19,7 @@ export default function SellerDashboardScreen({ navigation }) {
   const { getSellerProducts, getLowStockProducts, refreshProducts } = useProducts();
   const [refreshing, setRefreshing] = useState(false);
   const [sellerCarts, setSellerCarts] = useState([]);
-  const sellerId = user?.id || 'vendedor-1';
+  const sellerId = user?.id || '';
   const sellerProducts = getSellerProducts(sellerId);
   const sellerOrders = getOrdersForSeller(sellerId);
   const lowStock = getLowStockProducts(10).filter((product) => product.sellerId === sellerId);

@@ -2,7 +2,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import MotionPressable from './MotionPressable';
 import { colors, radius, shadows, spacing, typography } from '../theme';
-import { formatPrice } from '../data/demoData';
+import { formatPrice } from '../data/utils';
 
 export default function ProductCard({ product, onPress, onAddToCart, compact = false, dense = false }) {
   const outOfStock = product.stock < 1;

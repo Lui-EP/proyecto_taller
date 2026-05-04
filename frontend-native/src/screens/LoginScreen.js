@@ -1,4 +1,5 @@
-﻿import { Alert, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Alert, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenContainer from '../components/ScreenContainer';
 import FadeInView from '../components/FadeInView';
@@ -6,80 +7,149 @@ import MotionPressable from '../components/MotionPressable';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { useSession } from '../context/SessionContext';
 
-export default function LoginScreen({ navigation }) {
-  const { demoUsers, loginAsRole, ready } = useSession();
+export default function LoginScreen({ navigation, isEmbedded = false }) {
+  const { login, register } = useSession();
+  const [isLogin, setIsLogin] = useState(true);
 
-  const handleLogin = async (account) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('buyer');
+
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!email || !password) {
+      Alert.alert('Faltan datos', 'Ingresa tu correo y contraseña.');
+      return;
+    }
+
+    if (!isLogin && !name) {
+      Alert.alert('Faltan datos', 'Ingresa tu nombre para registrarte.');
+      return;
+    }
+
+    setLoading(true);
     try {
-      await loginAsRole(account.role);
-      navigation.replace('Tabs');
+      if (isLogin) {
+        await login(email, password);
+      } else {
+        await register({ email, password, name, role });
+      }
+      if (!isEmbedded && navigation) {
+        navigation.replace('Tabs');
+      }
     } catch (error) {
-      Alert.alert('No se pudo entrar', error?.message || 'Revisa la conexión con el backend o vuelve a intentar.');
+      Alert.alert('Error', error?.message || 'Revisa tu conexión e intenta de nuevo.');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <ScreenContainer>
-      <FadeInView>
-        <Text style={styles.title}>Cuentas demo</Text>
-        <Text style={styles.subtitle}>
-          {ready
-            ? 'Elige un rol para probar la experiencia móvil completa.'
-            : 'Cargando cuentas desde backend...'}
-        </Text>
-      </FadeInView>
+      <ScrollView contentContainerStyle={styles.scroll}>
+        <FadeInView>
+          <Text style={styles.title}>{isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}</Text>
+          <Text style={styles.subtitle}>
+            {isLogin
+              ? 'Ingresa tus datos para continuar.'
+              : 'Únete para comprar o vender productos locales.'}
+          </Text>
+        </FadeInView>
 
-      <View style={styles.list}>
-        {demoUsers.map((account, index) => (
-          <FadeInView key={account.id} delay={index * 70}>
-            <MotionPressable style={styles.card} onPress={() => handleLogin(account)}>
-              <View style={styles.cardHeader}>
-                <View style={styles.iconWrap}>
-                  <Ionicons name={roleIcon(account.role)} size={22} color={colors.primary} />
+        <FadeInView delay={70}>
+          <View style={styles.card}>
+            {!isLogin && (
+              <>
+                <Text style={styles.label}>Nombre</Text>
+                <TextInput
+                  style={styles.input}
+                  value={name}
+                  onChangeText={setName}
+                  placeholder="Tu nombre completo"
+                  placeholderTextColor={colors.textMuted}
+                  autoCapitalize="words"
+                />
+
+                <Text style={styles.label}>Perfil</Text>
+                <View style={styles.roleContainer}>
+                  <MotionPressable
+                    style={[styles.roleBtn, role === 'buyer' && styles.roleBtnActive]}
+                    onPress={() => setRole('buyer')}
+                  >
+                    <Ionicons name="person-outline" size={18} color={role === 'buyer' ? colors.white : colors.text} />
+                    <Text style={[styles.roleTxt, role === 'buyer' && styles.roleTxtActive]}>Comprador</Text>
+                  </MotionPressable>
+
+                  <MotionPressable
+                    style={[styles.roleBtn, role === 'seller' && styles.roleBtnActive]}
+                    onPress={() => setRole('seller')}
+                  >
+                    <Ionicons name="briefcase-outline" size={18} color={role === 'seller' ? colors.white : colors.text} />
+                    <Text style={[styles.roleTxt, role === 'seller' && styles.roleTxtActive]}>Vendedor</Text>
+                  </MotionPressable>
+
+                  <MotionPressable
+                    style={[styles.roleBtn, role === 'courier' && styles.roleBtnActive]}
+                    onPress={() => setRole('courier')}
+                  >
+                    <Ionicons name="bicycle-outline" size={18} color={role === 'courier' ? colors.white : colors.text} />
+                    <Text style={[styles.roleTxt, role === 'courier' && styles.roleTxtActive]}>Repartidor</Text>
+                  </MotionPressable>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.cardRole}>{roleLabel(account.role)}</Text>
-                  <Text style={styles.cardName}>{account.name}</Text>
-                </View>
-              </View>
-              <Text style={styles.cardEmail}>{account.email}</Text>
-              <Text style={styles.cardHint}>Toca para entrar con esta cuenta</Text>
+              </>
+            )}
+
+            <Text style={styles.label}>Correo electrónico</Text>
+            <TextInput
+              style={styles.input}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="tu@correo.com"
+              placeholderTextColor={colors.textMuted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <Text style={styles.label}>Contraseña</Text>
+            <TextInput
+              style={styles.input}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="******"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry
+            />
+
+            <MotionPressable
+              style={[styles.submitBtn, loading && styles.submitBtnDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              <Text style={styles.submitBtnTxt}>
+                {loading ? 'Cargando...' : isLogin ? 'Entrar' : 'Registrarme'}
+              </Text>
             </MotionPressable>
-          </FadeInView>
-        ))}
-
-        {ready && demoUsers.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No se cargaron cuentas demo</Text>
-            <Text style={styles.emptyText}>Verifica que clientes-service esté activo en el backend.</Text>
           </View>
-        ) : null}
-      </View>
+        </FadeInView>
+
+        <FadeInView delay={140}>
+          <MotionPressable style={styles.toggleBtn} onPress={() => setIsLogin(!isLogin)}>
+            <Text style={styles.toggleBtnTxt}>
+              {isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia sesión'}
+            </Text>
+          </MotionPressable>
+        </FadeInView>
+      </ScrollView>
     </ScreenContainer>
   );
 }
 
-function roleLabel(role) {
-  const labels = {
-    buyer: 'Cliente',
-    seller: 'Vendedor',
-    courier: 'Repartidor',
-    admin: 'Admin',
-  };
-  return labels[role] || role;
-}
-
-function roleIcon(role) {
-  const icons = {
-    buyer: 'person-outline',
-    seller: 'briefcase-outline',
-    courier: 'bicycle-outline',
-    admin: 'shield-checkmark-outline',
-  };
-  return icons[role] || 'person-outline';
-}
-
 const styles = StyleSheet.create({
+  scroll: {
+    paddingBottom: spacing.xl,
+  },
   title: {
     fontSize: typography.heading,
     fontWeight: '800',
@@ -91,67 +161,83 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     lineHeight: 20,
   },
-  list: {
-    gap: spacing.md,
-  },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     padding: spacing.lg,
-    gap: 8,
-    marginBottom: spacing.md,
     ...shadows.card,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    alignItems: 'center',
-  },
-  iconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff0da',
-  },
-  cardRole: {
-    color: colors.primary,
-    fontWeight: '800',
-  },
-  cardName: {
-    color: colors.text,
-    fontSize: typography.subheading,
-    fontWeight: '800',
-    marginTop: 3,
-  },
-  cardEmail: {
-    color: colors.textSoft,
-    marginTop: spacing.xs,
-  },
-  cardHint: {
-    color: colors.success,
-    marginTop: spacing.sm,
+  label: {
+    fontSize: typography.caption,
     fontWeight: '700',
+    color: colors.textSoft,
+    marginBottom: spacing.xs,
+    marginTop: spacing.md,
   },
-  emptyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
+  input: {
+    backgroundColor: colors.surfaceMuted,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.lg,
-    ...shadows.card,
-  },
-  emptyTitle: {
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    fontSize: 16,
     color: colors.text,
-    fontWeight: '800',
-    fontSize: typography.subheading,
-    marginBottom: 6,
   },
-  emptyText: {
-    color: colors.textSoft,
-    lineHeight: 20,
+  roleContainer: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  roleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.pill,
+    paddingVertical: 10,
+    backgroundColor: colors.surface,
+  },
+  roleBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  roleTxt: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  roleTxtActive: {
+    color: colors.white,
+  },
+  submitBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: spacing.xl,
+  },
+  submitBtnDisabled: {
+    opacity: 0.6,
+  },
+  submitBtnTxt: {
+    color: colors.white,
+    fontWeight: '800',
+    fontSize: 16,
+  },
+  toggleBtn: {
+    marginTop: spacing.lg,
+    alignItems: 'center',
+    padding: spacing.sm,
+  },
+  toggleBtnTxt: {
+    color: colors.primary,
+    fontWeight: '700',
+    fontSize: 15,
   },
 });

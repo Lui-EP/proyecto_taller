@@ -1,4 +1,4 @@
-﻿const API_BASE_URL = stripTrailingSlash(String(import.meta.env.VITE_API_URL || '').trim());
+const API_BASE_URL = stripTrailingSlash(String(import.meta.env.VITE_API_URL || '').trim());
 const CLIENTES_API_URL = stripTrailingSlash(requireApiUrl(
     import.meta.env.VITE_CLIENTES_API_URL || (API_BASE_URL ? `${API_BASE_URL}/api/clientes` : ''),
     'VITE_CLIENTES_API_URL (o VITE_API_URL)',
@@ -425,6 +425,7 @@ function createMercadoLocal() {
             );
         }
         if (params.seller_id) list = list.filter((item) => item.seller_id === params.seller_id);
+        if (params.category_id) list = list.filter((item) => item.category_id === params.category_id);
         if (params.is_featured) list = list.filter((item) => item.is_featured);
         if (params.is_local_handmade) list = list.filter((item) => item.is_local_handmade);
         return { products: list, total: list.length };

@@ -1,10 +1,10 @@
-﻿import { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { LayoutAnimation, StyleSheet, Text, View, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenContainer from '../components/ScreenContainer';
 import FadeInView from '../components/FadeInView';
 import MotionPressable from '../components/MotionPressable';
-import { formatPrice } from '../data/demoData';
+import { formatPrice } from '../data/utils';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { useCart } from '../context/CartContext';
 import { useProducts } from '../context/ProductsContext';

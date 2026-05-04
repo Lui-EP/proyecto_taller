@@ -1,4 +1,4 @@
-﻿import { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,7 +6,7 @@ import ScreenContainer from '../components/ScreenContainer';
 import FadeInView from '../components/FadeInView';
 import MotionPressable from '../components/MotionPressable';
 import StatusPill from '../components/StatusPill';
-import { getOrderStatusMeta } from '../data/demoData';
+import { getOrderStatusMeta } from '../data/utils';
 import { colors, gradients, radius, shadows, spacing, typography } from '../theme';
 import { useOrders } from '../context/OrdersContext';
 import { useProducts } from '../context/ProductsContext';

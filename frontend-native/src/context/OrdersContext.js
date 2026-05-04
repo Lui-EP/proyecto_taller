@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { normalizeOrder, sortOrdersByDate } from '../data/demoData';
+import { normalizeOrder, sortOrdersByDate } from '../data/utils';
 import { createOrderRequest, listOrders, updateOrderStatusRequest } from '../lib/ordersApi';
 import { useSession } from './SessionContext';
 

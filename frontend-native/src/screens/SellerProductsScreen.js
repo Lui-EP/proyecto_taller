@@ -1,9 +1,9 @@
-﻿import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenContainer from '../components/ScreenContainer';
 import FadeInView from '../components/FadeInView';
 import MotionPressable from '../components/MotionPressable';
-import { formatPrice } from '../data/demoData';
+import { formatPrice } from '../data/utils';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { useSession } from '../context/SessionContext';
 import { useProducts } from '../context/ProductsContext';
@@ -11,7 +11,7 @@ import { useProducts } from '../context/ProductsContext';
 export default function SellerProductsScreen({ navigation }) {
   const { user } = useSession();
   const { getSellerProducts } = useProducts();
-  const sellerId = user?.id || 'vendedor-1';
+  const sellerId = user?.id || '';
   const sellerProducts = getSellerProducts(sellerId);
 
   return (

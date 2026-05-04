@@ -7,11 +7,7 @@ import MotionPressable from '../components/MotionPressable';
 import NativeLocationMap from '../components/NativeLocationMap';
 import StatusPill from '../components/StatusPill';
 import { useOrders } from '../context/OrdersContext';
-import {
-  formatPrice,
-  getOrderStatusMeta,
-  getTimelineSteps,
-} from '../data/demoData';
+import { formatPrice, getOrderStatusMeta, getTimelineSteps } from '../data/utils';
 import {
   buildRegionFromPoints,
   buildStraightLineRoute,
