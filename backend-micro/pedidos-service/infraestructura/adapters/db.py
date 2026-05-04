@@ -1,4 +1,4 @@
-﻿import os
+import os
 import time
 from datetime import datetime
 from typing import Generator
@@ -57,8 +57,8 @@ SEED_ORDERS = [
         'delivery_method': 'delivery',
         'pickup_store_id': '',
         'pickup_store_name': '',
-        'address': 'Avenida Miguel Hidalgo, Tuxtla GutiÃ©rrez, Chiapas',
-        'address_label': 'Avenida Miguel Hidalgo, Bienestar Social, Tuxtla GutiÃ©rrez, Chiapas, MÃ©xico',
+        'address': 'Avenida Miguel Hidalgo, Tuxtla Gutiérrez, Chiapas',
+        'address_label': 'Avenida Miguel Hidalgo, Bienestar Social, Tuxtla Gutiérrez, Chiapas, México',
         'address_lat': 16.74481,
         'address_lng': -93.09304,
         'address_colony': 'Bienestar Social',
@@ -70,7 +70,7 @@ SEED_ORDERS = [
         'courier_lng': None,
         'last_location_at': None,
         'note': 'Tocar antes de llegar.',
-        'items_json': '[{"productId":"p-4","productName":"CafÃ© molido artesanal","sellerId":"vendedor-1","sellerName":"Artesana Luna","categoryLabel":"Alimentos","price":190,"quantity":1,"subtotal":190},{"productId":"p-7","productName":"Pulsera de Ã¡mbar","sellerId":"vendedor-1","sellerName":"Artesana Luna","categoryLabel":"JoyerÃ­a","price":310,"quantity":1,"subtotal":310}]',
+        'items_json': '[{"productId":"p-4","productName":"Café molido artesanal","sellerId":"vendedor-1","sellerName":"Artesana Luna","categoryLabel":"Alimentos","price":190,"quantity":1,"subtotal":190},{"productId":"p-7","productName":"Pulsera de ámbar","sellerId":"vendedor-1","sellerName":"Artesana Luna","categoryLabel":"Joyería","price":310,"quantity":1,"subtotal":310}]',
         'total': 500,
     },
     {
@@ -81,8 +81,8 @@ SEED_ORDERS = [
         'delivery_method': 'delivery',
         'pickup_store_id': '',
         'pickup_store_name': '',
-        'address': 'Centro, Tuxtla GutiÃ©rrez, Chiapas',
-        'address_label': 'Centro, Tuxtla GutiÃ©rrez, Chiapas, MÃ©xico',
+        'address': 'Centro, Tuxtla Gutiérrez, Chiapas',
+        'address_label': 'Centro, Tuxtla Gutiérrez, Chiapas, México',
         'address_lat': 16.7516,
         'address_lng': -93.1166,
         'address_colony': 'Centro',
@@ -93,8 +93,8 @@ SEED_ORDERS = [
         'courier_lat': 16.7493,
         'courier_lng': -93.1108,
         'last_location_at': datetime(2026, 4, 27, 8, 55, 0),
-        'note': 'Entregar en recepciÃ³n.',
-        'items_json': '[{"productId":"p-1","productName":"Canastas de palma","sellerId":"vendedor-1","sellerName":"Artesana Luna","categoryLabel":"ArtesanÃ­as","price":450,"quantity":1,"subtotal":450},{"productId":"p-10","productName":"Tazas de arcilla","sellerId":"vendedor-1","sellerName":"Artesana Luna","categoryLabel":"ArtesanÃ­as","price":340,"quantity":2,"subtotal":680}]',
+        'note': 'Entregar en recepción.',
+        'items_json': '[{"productId":"p-1","productName":"Canastas de palma","sellerId":"vendedor-1","sellerName":"Artesana Luna","categoryLabel":"Artesanías","price":450,"quantity":1,"subtotal":450},{"productId":"p-10","productName":"Tazas de arcilla","sellerId":"vendedor-1","sellerName":"Artesana Luna","categoryLabel":"Artesanías","price":340,"quantity":2,"subtotal":680}]',
         'total': 1130,
     },
     {
@@ -106,7 +106,7 @@ SEED_ORDERS = [
         'pickup_store_id': 'store-chiapa-corzo',
         'pickup_store_name': 'MercadoLocal Chiapa de Corzo',
         'address': 'Tienda MercadoLocal, Chiapa de Corzo, Chiapas',
-        'address_label': 'MercadoLocal Chiapa de Corzo, Centro, Chiapa de Corzo, Chiapas, MÃ©xico',
+        'address_label': 'MercadoLocal Chiapa de Corzo, Centro, Chiapa de Corzo, Chiapas, México',
         'pickup_store_lat': 16.7076,
         'pickup_store_lng': -93.011,
         'status': 'listo_recoger',
@@ -115,8 +115,8 @@ SEED_ORDERS = [
         'courier_lat': None,
         'courier_lng': None,
         'last_location_at': None,
-        'note': 'Mostrar cÃ³digo al llegar.',
-        'items_json': '[{"productId":"p-6","productName":"Molcajete volcÃ¡nico","sellerId":"vendedor-1","sellerName":"Artesana Luna","categoryLabel":"ArtesanÃ­as","price":640,"quantity":1,"subtotal":640}]',
+        'note': 'Mostrar código al llegar.',
+        'items_json': '[{"productId":"p-6","productName":"Molcajete volcánico","sellerId":"vendedor-1","sellerName":"Artesana Luna","categoryLabel":"Artesanías","price":640,"quantity":1,"subtotal":640}]',
         'total': 640,
     },
 ]
