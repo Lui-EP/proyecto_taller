@@ -42,7 +42,14 @@ const highlights = [
 export default function LandingPage() {
     const apiBaseUrl = String(import.meta.env.VITE_API_URL || 'https://mercado-local.ddns.net').trim();
     const healthUrl = `${apiBaseUrl || 'https://mercado-local.ddns.net'}/health`;
-    const appUrl = String(import.meta.env.VITE_APP_URL || '/inicio').trim();
+    const appUrlRaw = String(import.meta.env.VITE_APP_URL || '/inicio').trim();
+    const appUrl = (() => {
+        const safe = appUrlRaw || '/inicio';
+        if (safe.startsWith('/')) return safe === '/' ? '/inicio' : safe;
+        const withoutTrailing = safe.replace(/\/+$/, '');
+        if (withoutTrailing.endsWith('/inicio')) return withoutTrailing;
+        return `${withoutTrailing}/inicio`;
+    })();
 
     return (
         <main className="min-h-screen overflow-hidden bg-gradient-to-b from-[#FBF5EA] via-[#F7EEDC] to-[#EEDFC5] text-[#4B3217]">
