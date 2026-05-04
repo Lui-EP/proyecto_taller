@@ -428,6 +428,15 @@ function createMercadoLocal() {
         if (params.category_id) list = list.filter((item) => item.category_id === params.category_id);
         if (params.is_featured) list = list.filter((item) => item.is_featured);
         if (params.is_local_handmade) list = list.filter((item) => item.is_local_handmade);
+        
+        if (params.sort_by === 'price') {
+            list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+        } else if (params.sort_by === 'views') {
+            list.sort((a, b) => Number(b.views || 0) - Number(a.views || 0));
+        } else {
+            list.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+        }
+
         return { products: list, total: list.length };
     };
 
