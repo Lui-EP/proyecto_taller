@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import PageLoader from '../components/PageLoader';
@@ -24,7 +24,7 @@ export default function FavoritesPage() {
         } finally {
             setLoading(false);
         }
-    }, [mercado, session]);
+    }, [mercado, session.syncState]);
 
     useEffect(() => {
         if (!session.token) {

@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
@@ -66,7 +66,7 @@ export default function ProductPage() {
         return () => {
             cancelled = true;
         };
-    }, [productId, mercado, session]);
+    }, [productId, mercado, session.syncState]);
 
     const buyNow = async () => {
         if (!product) return;
