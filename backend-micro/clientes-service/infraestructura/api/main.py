@@ -35,14 +35,10 @@ JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256').strip()
 JWT_EXPIRE_MINUTES = int(os.getenv('JWT_EXPIRE_MINUTES', '120'))
 PASSWORD_HASH_ROUNDS = int(os.getenv('PASSWORD_HASH_ROUNDS', '29000'))
 
-raw_origins = os.getenv('ALLOWED_ORIGINS', '*').strip()
-allow_all_origins = raw_origins == '*' or raw_origins == ''
-allowed_origins = ['*'] if allow_all_origins else [item.strip() for item in raw_origins.split(',') if item.strip()]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=not allow_all_origins,
+    allow_origins=['*'],
+    allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
 )

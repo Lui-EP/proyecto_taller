@@ -17,14 +17,10 @@ security_scheme = HTTPBearer(auto_error=False)
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', '').strip()
 JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256').strip()
 
-raw_origins = os.getenv('ALLOWED_ORIGINS', '*').strip()
-allow_all_origins = raw_origins == '*' or raw_origins == ''
-allowed_origins = ['*'] if allow_all_origins else [item.strip() for item in raw_origins.split(',') if item.strip()]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=not allow_all_origins,
+    allow_origins=['*'],
+    allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
 )
