@@ -216,7 +216,7 @@ export default function MainLayout({ children }) {
     const onLogout = () => {
         session.logout();
         closeMobileMenu();
-        navigate('/');
+        navigate('/inicio');
     };
 
     return (
