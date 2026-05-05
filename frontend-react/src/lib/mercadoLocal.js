@@ -905,6 +905,7 @@ function createMercadoLocal() {
     mercado.AdminAPI.deleteProduct = async (id) => fetchJson(CLIENTES_API_URL, `/admin/products/${encodeURIComponent(id)}`, { method: 'DELETE' });
     mercado.AdminAPI.verifyLocalHandmade = async (id, verified) => fetchJson(CLIENTES_API_URL, `/admin/products/${encodeURIComponent(id)}/verify-local?verified=${encodeURIComponent(Boolean(verified))}`, { method: 'PUT' });
     mercado.AdminAPI.featureProduct = async (id, days) => fetchJson(CLIENTES_API_URL, `/admin/products/${encodeURIComponent(id)}/feature?days=${encodeURIComponent(Number(days || 7))}`, { method: 'PUT' });
+    mercado.AdminAPI.unfeatureProduct = async (id) => fetchJson(CLIENTES_API_URL, `/admin/products/${encodeURIComponent(id)}/feature?featured=false`, { method: 'PUT' });
     mercado.AdminAPI.updateSellerStatus = async (id, statusValue) => fetchJson(CLIENTES_API_URL, `/admin/sellers/${encodeURIComponent(id)}/status?status=${encodeURIComponent(statusValue)}`, { method: 'PUT' });
     mercado.AdminAPI.updateUserStatus = async (id, statusValue) => fetchJson(CLIENTES_API_URL, `/admin/users/${encodeURIComponent(id)}/status?status=${encodeURIComponent(statusValue)}`, { method: 'PUT' });
     mercado.AdminAPI.deleteUser = async (id) => fetchJson(CLIENTES_API_URL, `/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE' });

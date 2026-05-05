@@ -1282,6 +1282,7 @@ def admin_verify_local(
 @app.put('/admin/products/{product_id}/feature')
 def admin_feature_product(
     product_id: str,
+    featured: bool = Query(default=True),
     days: int = Query(default=7),
     db: Session = Depends(get_session),
     _usuario: UsuarioApp = Depends(require_roles('admin')),
@@ -1289,10 +1290,10 @@ def admin_feature_product(
     product = db.get(Producto, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
-    product.featured = True
+    product.featured = bool(featured)
     product.updated_at = datetime.utcnow()
     db.commit()
-    return {'status': 'ok', 'product_id': product_id, 'featured': True, 'days': int(max(1, days))}
+    return {'status': 'ok', 'product_id': product_id, 'featured': bool(product.featured), 'days': int(max(1, days))}
 
 
 @app.put('/admin/sellers/{seller_id}/status')

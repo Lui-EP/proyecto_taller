@@ -16,6 +16,7 @@ const TABS = [
 ];
 
 const PRODUCT_FILTERS = [
+    { value: 'featured', label: 'Destacados' },
     { value: 'pending', label: 'Pendientes' },
     { value: 'approved', label: 'Aprobados' },
     { value: 'paused', label: 'Pausados' },
@@ -314,7 +315,11 @@ export default function AdminPage() {
     }, [mercado]);
 
     const loadProducts = useCallback(async (status = productFilter) => {
-        const response = await mercado.ProductsAPI.getAll({ status: status || undefined, include_all_status: true, limit: 120 });
+        const safeStatus = String(status || '').toLowerCase();
+        const statusForApi = ['pending', 'approved', 'paused', 'rejected'].includes(safeStatus)
+            ? safeStatus
+            : undefined;
+        const response = await mercado.ProductsAPI.getAll({ status: statusForApi, include_all_status: true, limit: 120 });
         setProducts(response.products || []);
     }, [mercado, productFilter]);
 
@@ -490,6 +495,16 @@ export default function AdminPage() {
         }
     };
 
+    const unfeatureProduct = async (id) => {
+        try {
+            await mercado.AdminAPI.unfeatureProduct(id);
+            mercado.showToast('Producto retirado de destacados');
+            await loadProducts(productFilter);
+        } catch {
+            mercado.showToast('No se pudo bajar de destacados', 'error');
+        }
+    };
+
     const createCategory = async (event) => {
         event.preventDefault();
         const name = categoryForm.name.trim();
@@ -634,6 +649,9 @@ export default function AdminPage() {
 
     const filteredProducts = useMemo(() => {
         const safeStatus = String(productFilter || '').toLowerCase();
+        if (safeStatus === 'featured') {
+            return products.filter((item) => Boolean(item.is_featured));
+        }
         if (!safeStatus) return products;
         return products.filter((item) => String(item.status || '').toLowerCase() === safeStatus);
     }, [products, productFilter]);
@@ -801,9 +819,15 @@ export default function AdminPage() {
                                                     Verificar local
                                                 </button>
                                             ) : null}
-                                            <button className="btn btn-primary btn-sm" type="button" onClick={() => featureProduct(product.id)}>
-                                                Destacar
-                                            </button>
+                                            {product.is_featured ? (
+                                                <button className="btn btn-secondary btn-sm" type="button" onClick={() => unfeatureProduct(product.id)}>
+                                                    Bajar de destacados
+                                                </button>
+                                            ) : (
+                                                <button className="btn btn-primary btn-sm" type="button" onClick={() => featureProduct(product.id)}>
+                                                    Destacar
+                                                </button>
+                                            )}
                                             <button className="btn btn-outline btn-sm adminx-btn-danger" type="button" onClick={() => deleteProduct(product.id, product.name || 'producto')}>
                                                 Eliminar
                                             </button>
