@@ -280,7 +280,7 @@ function createMercadoLocal() {
     };
     mercado.createPlaceholderImage = (label = 'Producto') => {
         const safe = encodeURIComponent(String(label || 'Producto'));
-        return `https://dummyimage.com/900x900/efe6d7/4a331f&text=${safe}`;
+        return `https://dummyimage.com/900x900/efe6d7/4a331f?text=${safe}`;
     };
     mercado.showToast = (message, type = 'info') => {
         console[type === 'error' ? 'error' : 'log'](`[${type}] ${message}`);
