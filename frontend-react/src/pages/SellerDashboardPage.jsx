@@ -92,13 +92,14 @@ export default function SellerDashboardPage() {
 
     const loadData = useCallback(async () => {
         try {
-            const [metricsResp, productsResp, categoriesResp, activeCartsResp, sellerOrdersResp, pickupPendingResp] = await Promise.all([
+            const [metricsResp, productsResp, categoriesResp, activeCartsResp, sellerOrdersResp, pickupPendingResp, myReportsResp] = await Promise.all([
                 mercado.SellersAPI.getMetrics(),
                 mercado.ProductsAPI.getSellerProducts(),
                 mercado.CategoriesAPI.getAll(),
                 mercado.CartAPI.getSellerActive(),
                 mercado.OrdersAPI.getSellerOrders(),
                 mercado.OrdersAPI.getPickupPending(),
+                mercado.ReportsAPI.getMy(),
             ]);
 
             setMetrics(metricsResp || null);
@@ -134,6 +135,27 @@ export default function SellerDashboardPage() {
             if (pendingCount === 0) {
                 pendingPickupToastRef.current = '';
             }
+
+            const featureReports = (myReportsResp || []).filter(r => r.reason === 'feature_request' && (r.status === 'resolved' || r.status === 'rejected'));
+            if (featureReports.length > 0) {
+                const seenReports = JSON.parse(localStorage.getItem('seenReports') || '[]');
+                const newReports = featureReports.filter(r => !seenReports.includes(r.id));
+                
+                if (newReports.length > 0) {
+                    const approved = newReports.filter(r => r.status === 'resolved').length;
+                    const rejected = newReports.filter(r => r.status === 'rejected').length;
+                    
+                    let msg = '';
+                    if (approved > 0) msg += `¡Buenas noticias! El administrador ha aprobado tu solicitud y destacado ${approved} producto(s).\n`;
+                    if (rejected > 0) msg += `El administrador ha denegado la solicitud para destacar ${rejected} producto(s).\n`;
+                    
+                    setTimeout(() => window.alert(msg.trim()), 500);
+                    
+                    const updatedSeen = [...seenReports, ...newReports.map(r => r.id)];
+                    localStorage.setItem('seenReports', JSON.stringify(updatedSeen));
+                }
+            }
+
         } catch {
             mercado.showToast('No se pudo cargar panel de vendedor', 'error');
         } finally {
