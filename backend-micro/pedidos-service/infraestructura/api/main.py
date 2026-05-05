@@ -227,7 +227,6 @@ def listar_pedidos(
     elif requester_role == 'courier':
         if courier_id and courier_id != requester_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para ese repartidor')
-        courier_id = requester_id
     elif requester_role == 'seller':
         if seller_id and seller_id != requester_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para ese vendedor')
@@ -235,7 +234,13 @@ def listar_pedidos(
 
     if customer_id:
         serialized = [pedido for pedido in serialized if pedido['customerId'] == customer_id]
-    if courier_id:
+    if requester_role == 'courier' and not courier_id:
+        serialized = [
+            pedido
+            for pedido in serialized
+            if not str(pedido.get('courierId') or '').strip() or str(pedido.get('courierId') or '').strip() == requester_id
+        ]
+    elif courier_id:
         serialized = [pedido for pedido in serialized if pedido['courierId'] == courier_id]
     if seller_id:
         serialized = [pedido for pedido in serialized if any(item.get('sellerId') == seller_id for item in pedido['items'])]
@@ -257,8 +262,10 @@ def obtener_pedido(
     requester_id = str(claims.get('sub') or '')
     if requester_role == 'buyer' and serialized['customerId'] != requester_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para este pedido')
-    if requester_role == 'courier' and serialized['courierId'] != requester_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para este pedido')
+    if requester_role == 'courier':
+        assigned_courier = str(serialized.get('courierId') or '').strip()
+        if assigned_courier and assigned_courier != requester_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para este pedido')
     if requester_role == 'seller' and not any(item.get('sellerId') == requester_id for item in serialized['items']):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para este pedido')
     return {'status': 'ok', 'pedido': serialized}

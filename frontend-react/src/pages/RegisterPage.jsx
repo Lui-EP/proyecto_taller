@@ -3,9 +3,15 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 
+function resolveInitialRole(rawRole) {
+    const safe = String(rawRole || '').toLowerCase();
+    if (safe === 'seller' || safe === 'courier') return safe;
+    return 'buyer';
+}
+
 export default function RegisterPage() {
     const [searchParams] = useSearchParams();
-    const initialRole = searchParams.get('role') === 'seller' ? 'seller' : 'buyer';
+    const initialRole = resolveInitialRole(searchParams.get('role'));
 
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -32,13 +38,15 @@ export default function RegisterPage() {
     }, [session.token, session.user, navigate]);
 
     const isSeller = form.role === 'seller';
+    const needsProfileFields = form.role === 'seller' || form.role === 'courier';
 
     const canSubmit = useMemo(() => {
         if (!form.name || !form.email || !form.password || !form.confirmPassword) return false;
         if (form.password !== form.confirmPassword) return false;
-        if (isSeller && (!form.phone || !form.location || !form.curp)) return false;
+        if (needsProfileFields && (!form.phone || !form.location)) return false;
+        if (isSeller && !form.curp) return false;
         return true;
-    }, [form, isSeller]);
+    }, [form, isSeller, needsProfileFields]);
 
     const onSubmit = async (event) => {
         event.preventDefault();
@@ -49,17 +57,17 @@ export default function RegisterPage() {
         }
 
         if (form.password.length < 6) {
-            mercado.showToast('La contraseña debe tener al menos 6 caracteres', 'error');
+            mercado.showToast('La contrasena debe tener al menos 6 caracteres', 'error');
+            return;
+        }
+
+        if (needsProfileFields && form.phone.trim().length !== 10) {
+            mercado.showToast('El numero de telefono debe tener 10 digitos', 'error');
             return;
         }
 
         if (isSeller && form.curp.trim().length !== 18) {
             mercado.showToast('La CURP debe tener 18 caracteres', 'error');
-            return;
-        }
-
-        if (isSeller && form.phone.trim().length !== 10) {
-            mercado.showToast('El numero de telefono debe tener 10 digitos', 'error');
             return;
         }
 
@@ -77,6 +85,7 @@ export default function RegisterPage() {
 
             mercado.showToast(`Bienvenido, ${user.name}`);
             if (user.role === 'seller') navigate('/vendedor');
+            else if (user.role === 'courier') navigate('/repartidor');
             else navigate('/catalogo');
         } catch (error) {
             mercado.showToast(error.message || 'No se pudo crear la cuenta', 'error');
@@ -89,7 +98,7 @@ export default function RegisterPage() {
         <main className="auth-page">
             <div className="auth-container">
                 <Link to="/inicio" className="auth-back-link">
-                    <span>←</span>
+                    <span>&larr;</span>
                     <span>Volver al inicio</span>
                 </Link>
 
@@ -97,13 +106,13 @@ export default function RegisterPage() {
                     <div className="auth-header">
                         <div className="auth-logo">🌾</div>
                         <h1 className="auth-title">Crear cuenta</h1>
-                        <p className="auth-subtitle">Únete a nuestra comunidad</p>
+                        <p className="auth-subtitle">Unete a nuestra comunidad</p>
                     </div>
 
                     <div className="auth-body">
                         <form className="auth-form" onSubmit={onSubmit}>
                             <div className="form-group">
-                                <label className="form-label">¿Cómo quieres usar MercadoLocal?</label>
+                                <label className="form-label">Como quieres usar MercadoLocal?</label>
                                 <div className="role-selection">
                                     <label className="role-option">
                                         <input
@@ -133,6 +142,20 @@ export default function RegisterPage() {
                                             <span className="role-subtitle">Quiero vender productos</span>
                                         </div>
                                     </label>
+                                    <label className="role-option">
+                                        <input
+                                            type="radio"
+                                            name="role"
+                                            value="courier"
+                                            checked={form.role === 'courier'}
+                                            onChange={() => setForm((prev) => ({ ...prev, role: 'courier' }))}
+                                        />
+                                        <div className="role-option-content">
+                                            <div className="role-icon courier">🛵</div>
+                                            <span className="role-title">Repartidor</span>
+                                            <span className="role-subtitle">Quiero entregar pedidos</span>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
 
@@ -150,7 +173,7 @@ export default function RegisterPage() {
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="register-email" className="form-label">Correo electrónico</label>
+                                <label htmlFor="register-email" className="form-label">Correo electronico</label>
                                 <input
                                     type="email"
                                     id="register-email"
@@ -163,13 +186,13 @@ export default function RegisterPage() {
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="register-password" className="form-label">Contraseña</label>
+                                <label htmlFor="register-password" className="form-label">Contrasena</label>
                                 <div className="password-input-container">
                                     <input
                                         type={showPassword ? 'text' : 'password'}
                                         id="register-password"
                                         className="form-input"
-                                        placeholder="Mínimo 6 caracteres"
+                                        placeholder="Minimo 6 caracteres"
                                         value={form.password}
                                         onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
                                         minLength={6}
@@ -180,13 +203,13 @@ export default function RegisterPage() {
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="register-confirm-password" className="form-label">Confirmar contraseña</label>
+                                <label htmlFor="register-confirm-password" className="form-label">Confirmar contrasena</label>
                                 <div className="password-input-container">
                                     <input
                                         type={showConfirm ? 'text' : 'password'}
                                         id="register-confirm-password"
                                         className="form-input"
-                                        placeholder="Repite tu contraseña"
+                                        placeholder="Repite tu contrasena"
                                         value={form.confirmPassword}
                                         onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
                                         required
@@ -195,23 +218,23 @@ export default function RegisterPage() {
                                 </div>
                             </div>
 
-                            <div className={isSeller ? '' : 'hidden'}>
+                            <div className={needsProfileFields ? '' : 'hidden'}>
                                 <div className="form-group">
-                                    <label htmlFor="register-phone" className="form-label">Número de teléfono</label>
+                                    <label htmlFor="register-phone" className="form-label">Numero de telefono</label>
                                     <input
                                         type="tel"
                                         id="register-phone"
                                         className="form-input"
-                                        placeholder="10 dígitos"
+                                        placeholder="10 digitos"
                                         value={form.phone}
                                         onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value.replace(/\D/g, '').slice(0, 10) }))}
                                         pattern="[0-9]{10}"
                                         maxLength="10"
-                                        required={isSeller}
+                                        required={needsProfileFields}
                                     />
                                 </div>
                                 <div className="form-group">
-                                    <label htmlFor="register-location" className="form-label">Ubicación</label>
+                                    <label htmlFor="register-location" className="form-label">Ubicacion</label>
                                     <input
                                         type="text"
                                         id="register-location"
@@ -219,10 +242,10 @@ export default function RegisterPage() {
                                         placeholder="Ciudad, Estado"
                                         value={form.location}
                                         onChange={(event) => setForm((prev) => ({ ...prev, location: event.target.value }))}
-                                        required={isSeller}
+                                        required={needsProfileFields}
                                     />
                                 </div>
-                                <div className="form-group">
+                                <div className={isSeller ? 'form-group' : 'hidden'}>
                                     <label htmlFor="register-curp" className="form-label">CURP</label>
                                     <input
                                         type="text"
@@ -238,12 +261,12 @@ export default function RegisterPage() {
                             </div>
 
                             <button type="submit" className="btn btn-primary btn-lg w-full" disabled={loading}>
-                                {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
+                                {loading ? 'Creando cuenta...' : 'Crear cuenta'}
                             </button>
                         </form>
 
                         <div className="auth-footer">
-                            <p>¿Ya tienes cuenta? <Link to="/login">Inicia sesión</Link></p>
+                            <p>Ya tienes cuenta? <Link to="/login">Inicia sesion</Link></p>
                         </div>
                     </div>
                 </div>

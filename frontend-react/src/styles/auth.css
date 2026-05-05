@@ -78,7 +78,7 @@
 /* Role Selection */
 .role-selection {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: var(--spacing-md);
 }
 
@@ -136,6 +136,11 @@
 .role-icon.seller {
     background-color: rgba(129, 178, 154, 0.1);
     color: var(--sage);
+}
+
+.role-icon.courier {
+    background-color: rgba(79, 70, 229, 0.12);
+    color: #4f46e5;
 }
 
 .role-title {
