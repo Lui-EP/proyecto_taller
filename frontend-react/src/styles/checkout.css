@@ -309,6 +309,32 @@
     cursor: crosshair;
 }
 
+.checkout-map-interactive {
+    min-height: 220px;
+}
+
+.checkout-map-interactive .leaflet-pane,
+.checkout-map-interactive .leaflet-control {
+    z-index: 1;
+}
+
+.checkout-pin-wrap {
+    background: transparent;
+    border: 0;
+}
+
+.checkout-pin {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    font-size: 1.05rem;
+    background: rgba(246, 231, 208, 0.92);
+    border: 1px solid rgba(168, 106, 42, 0.35);
+    box-shadow: 0 6px 14px rgba(37, 32, 26, 0.16);
+}
+
 .checkout-pin.pin-bounce {
     animation: checkout-pin-bounce 0.38s ease-out;
     transform-origin: center bottom;

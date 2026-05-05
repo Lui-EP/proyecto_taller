@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import L from 'leaflet';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 import { resolveImageSrc } from '../lib/assets';
@@ -133,6 +134,9 @@ export default function CheckoutPage() {
     const googleAutocompleteRef = useRef(null);
     const googlePlacesServiceRef = useRef(null);
     const searchAddressLocationRef = useRef(null);
+    const checkoutMapElementRef = useRef(null);
+    const checkoutMapRef = useRef(null);
+    const checkoutMapMarkerRef = useRef(null);
 
     const extractAddressZones = (address) => {
         const addr = address || {};
@@ -1030,6 +1034,13 @@ export default function CheckoutPage() {
     }, []);
 
     const isPickup = deliveryMethod === 'pickup';
+    const isStoreLocationValid = (value) => {
+        const safe = String(value || '').trim().toLowerCase();
+        if (!safe) return false;
+        if (safe.includes('por confirmar')) return false;
+        if (safe === 'chiapas, mexico' || safe === 'chiapas mexico') return false;
+        return safe.length >= 8;
+    };
 
     const pickupPoints = useMemo(() => {
         const map = new Map();
@@ -1051,6 +1062,7 @@ export default function CheckoutPage() {
             map.set(sellerId, {
                 id: sellerId,
                 name: sellerName,
+                location_valid: isStoreLocationValid(sellerLocation),
                 location: sellerLocation || 'Ubicación de tienda por confirmar',
             });
         });
@@ -1064,8 +1076,10 @@ export default function CheckoutPage() {
             return;
         }
 
-        if (!pickupPoints.some((point) => point.id === pickupSellerId)) {
-            setPickupSellerId(pickupPoints[0].id);
+        const hasCurrent = pickupPoints.some((point) => point.id === pickupSellerId);
+        if (!hasCurrent) {
+            const firstValid = pickupPoints.find((point) => point.location_valid);
+            setPickupSellerId((firstValid || pickupPoints[0]).id);
         }
     }, [pickupPoints, pickupSellerId]);
 
@@ -1073,6 +1087,7 @@ export default function CheckoutPage() {
         () => pickupPoints.find((point) => point.id === pickupSellerId) || pickupPoints[0] || null,
         [pickupPoints, pickupSellerId]
     );
+    const selectedPickupHasValidLocation = Boolean(selectedPickupPoint?.location_valid);
 
     const selectedPickupSellerId = String(selectedPickupPoint?.id || '').trim();
 
@@ -1103,18 +1118,82 @@ export default function CheckoutPage() {
         () => checkoutItems.reduce((sum, item) => sum + Number(item.subtotal || 0), 0),
         [checkoutItems]
     );
-    const checkoutGoogleEmbedUrl = useMemo(() => {
-        if (deliveryMethod !== 'delivery') return '';
-        if (customerLocation && Number.isFinite(Number(customerLocation.lat)) && Number.isFinite(Number(customerLocation.lng))) {
-            return `https://www.google.com/maps?q=${encodeURIComponent(`${Number(customerLocation.lat)},${Number(customerLocation.lng)}`)}&z=17&output=embed`;
-        }
-        const rawAddress = String(customer.address || '').trim();
-        const address = rawAddress || detectedAddress;
-        if (address) {
-            return `https://www.google.com/maps?q=${encodeURIComponent(address)}&z=16&output=embed`;
-        }
-        return `https://www.google.com/maps?q=${DEFAULT_LOCATION.lat},${DEFAULT_LOCATION.lng}&z=13&output=embed`;
-    }, [customer.address, customerLocation, deliveryMethod, detectedAddress]);
+
+    const createCheckoutPinIcon = (bounce = false) => L.divIcon({
+        className: 'checkout-pin-wrap',
+        html: `<div class="checkout-pin${bounce ? ' pin-bounce' : ''}">📍</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 28],
+    });
+
+    useEffect(() => {
+        if (deliveryMethod !== 'delivery') return;
+        if (!checkoutMapElementRef.current) return;
+        if (checkoutMapRef.current) return;
+
+        const hasCoords = customerLocation
+            && Number.isFinite(Number(customerLocation.lat))
+            && Number.isFinite(Number(customerLocation.lng));
+        const initialLat = hasCoords ? Number(customerLocation.lat) : DEFAULT_LOCATION.lat;
+        const initialLng = hasCoords ? Number(customerLocation.lng) : DEFAULT_LOCATION.lng;
+        const initialZoom = hasCoords ? 17 : 13;
+
+        const map = L.map(checkoutMapElementRef.current, {
+            zoomControl: true,
+            attributionControl: false,
+        }).setView([initialLat, initialLng], initialZoom);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+        }).addTo(map);
+
+        const marker = L.marker([initialLat, initialLng], { icon: createCheckoutPinIcon(false) }).addTo(map);
+
+        map.on('click', async (event) => {
+            const coords = {
+                lat: Number(event.latlng.lat.toFixed(6)),
+                lng: Number(event.latlng.lng.toFixed(6)),
+            };
+
+            setAddressSuggestions([]);
+            setShowAddressSuggestions(false);
+            setSuggestionsSource('');
+            setCustomerLocation(coords);
+            setLocationStatus('requesting');
+
+            marker.setLatLng([coords.lat, coords.lng]);
+            marker.setIcon(createCheckoutPinIcon(true));
+            window.setTimeout(() => {
+                marker.setIcon(createCheckoutPinIcon(false));
+            }, 420);
+
+            const success = await applyGeoDetailsToAddress(coords, false, true);
+            setLocationStatus(success ? 'granted' : 'error');
+            if (success) {
+                mercado.showToast('Punto de entrega actualizado desde el mapa');
+            }
+        });
+
+        checkoutMapRef.current = map;
+        checkoutMapMarkerRef.current = marker;
+
+        return () => {
+            map.remove();
+            checkoutMapRef.current = null;
+            checkoutMapMarkerRef.current = null;
+        };
+    }, [deliveryMethod, customerLocation, mercado]);
+
+    useEffect(() => {
+        if (deliveryMethod !== 'delivery') return;
+        if (!checkoutMapRef.current || !checkoutMapMarkerRef.current) return;
+        if (!customerLocation || !Number.isFinite(Number(customerLocation.lat)) || !Number.isFinite(Number(customerLocation.lng))) return;
+
+        const lat = Number(customerLocation.lat);
+        const lng = Number(customerLocation.lng);
+        checkoutMapMarkerRef.current.setLatLng([lat, lng]);
+        checkoutMapRef.current.setView([lat, lng], Math.max(checkoutMapRef.current.getZoom(), 16), { animate: true });
+    }, [customerLocation, deliveryMethod]);
 
     const requestCustomerLocation = () => {
         if (!navigator.geolocation) {
@@ -1191,6 +1270,10 @@ export default function CheckoutPage() {
             mercado.showToast('Selecciona una tienda para recoger', 'error');
             return;
         }
+        if (isPickup && !selectedPickupHasValidLocation) {
+            mercado.showToast('Esta tienda aun no tiene direccion valida para recogida. Elige otra tienda o pide al vendedor actualizar su direccion.', 'error');
+            return;
+        }
         if (isPickup && incompatiblePickupCount > 0 && !activeItems.length) {
             mercado.showToast('No hay productos de la tienda seleccionada para recoger', 'error');
             return;
@@ -1243,7 +1326,12 @@ export default function CheckoutPage() {
 
             const params = new URLSearchParams({ id: order.id });
             if (order.tracking_token) params.set('token', order.tracking_token);
-            navigate(`/seguimiento-cliente?${params.toString()}`);
+            const trackingHref = `/seguimiento-cliente?${params.toString()}`;
+            const trackingStorageKey = `ml_tracking_href_${String(session.user?.id || 'anon')}`;
+            if (typeof window !== 'undefined') {
+                window.localStorage.setItem(trackingStorageKey, trackingHref);
+            }
+            navigate(trackingHref);
         } catch (error) {
             mercado.showToast(error.message || 'No se pudo confirmar el pedido', 'error');
         } finally {
@@ -1364,14 +1452,19 @@ export default function CheckoutPage() {
                                     required
                                 >
                                     {pickupPoints.map((point) => (
-                                        <option key={point.id} value={point.id}>
-                                            {point.name}
+                                        <option key={point.id} value={point.id} disabled={!point.location_valid}>
+                                            {point.name}{point.location_valid ? '' : ' (ubicacion pendiente)'}
                                         </option>
                                     ))}
                                 </select>
                                 <p className="checkout-note">
                                     Dirección de recogida: <strong>{selectedPickupPoint?.location || 'Ubicación por confirmar'}</strong>
                                 </p>
+                                {!selectedPickupHasValidLocation ? (
+                                    <p className="checkout-note pickup-warning-note">
+                                        Esta tienda aun no comparte direccion valida. El vendedor debe actualizar su ubicacion en el perfil.
+                                    </p>
+                                ) : null}
                                 {incompatiblePickupCount > 0 ? (
                                     <p className="checkout-note pickup-warning-note">
                                         {incompatiblePickupCount} producto(s) no pertenecen a esta tienda y quedan fuera de la recogida.
@@ -1456,23 +1549,22 @@ export default function CheckoutPage() {
                                     </div>
                                 ) : null}
 
-                                {deliveryMethod === 'delivery' && (customerLocation || customer.address || detectedAddress) ? (
+                                {deliveryMethod === 'delivery' ? (
                                     <div className="checkout-map-preview" aria-label="Vista previa del mapa de entrega">
-                                        <p className="checkout-map-title">Vista previa en Google Maps</p>
-                                        <iframe
-                                            title="Vista previa Google Maps entrega"
-                                            src={checkoutGoogleEmbedUrl}
-                                            className="checkout-map-frame courier-map"
-                                            loading="lazy"
-                                            referrerPolicy="no-referrer-when-downgrade"
+                                        <p className="checkout-map-title">Mapa de entrega (haz clic para ajustar el punto exacto)</p>
+                                        <div
+                                            ref={checkoutMapElementRef}
+                                            className="checkout-map-frame courier-map checkout-map-interactive"
+                                            role="application"
+                                            aria-label="Mapa interactivo de entrega"
                                         />
-                                        <p className="checkout-map-helper">La vista se actualiza con la direccion y ubicacion detectadas para el pedido.</p>
+                                        <p className="checkout-map-helper">Cada clic mueve el pin y actualiza la direccion guardada para tu pedido.</p>
                                     </div>
                                 ) : null}
                             </>
                         )}
 
-                        <button className="btn btn-primary w-full" type="submit" disabled={submitting || !checkoutItems.length}>
+                        <button className="btn btn-primary w-full" type="submit" disabled={submitting || !checkoutItems.length || (isPickup && !selectedPickupHasValidLocation)}>
                             {submitting ? 'Confirmando...' : 'Confirmar compra'}
                         </button>
                     </form>

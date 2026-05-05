@@ -938,15 +938,6 @@ export default function AdminPage() {
                                                 Aprobar
                                             </button>
                                         ) : null}
-                                        {String(category.status) === 'pending' ? (
-                                            <button
-                                                type="button"
-                                                className="btn btn-secondary btn-sm"
-                                                onClick={() => updateCategoryStatus(category.id, 'rejected')}
-                                            >
-                                                Rechazar
-                                            </button>
-                                        ) : null}
                                         <button
                                             type="button"
                                             className="btn btn-outline btn-sm adminx-btn-danger"

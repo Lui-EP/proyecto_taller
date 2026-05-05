@@ -23,6 +23,22 @@ function normalizeStatus(value) {
     return 'pedido_realizado';
 }
 
+function pickBestTrackingOrder(orders) {
+    const list = Array.isArray(orders) ? orders : [];
+    if (!list.length) return null;
+
+    const sorted = [...list].sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
+    const active = sorted.find((order) => {
+        const status = normalizeStatus(order?.status);
+        const isActiveStatus = status !== 'entregado' && status !== 'cancelado_no_show';
+        const isPickupPending = String(order?.delivery_method || '').toLowerCase() === 'pickup'
+            && String(order?.pickup_status || '').toLowerCase() === 'pendiente_recoleccion';
+        return isActiveStatus || isPickupPending;
+    });
+
+    return active || sorted[0] || null;
+}
+
 function geoPermissionLabel(permission) {
     if (permission === 'granted') return 'Permiso de ubicacion activo';
     if (permission === 'from_order') return 'Ubicacion tomada del pedido confirmado';
@@ -132,13 +148,32 @@ export default function TrackingClientPage() {
         let timer = null;
 
         const loadOrder = async () => {
-            if (!orderId) {
-                setError('Falta el id del pedido en la URL.');
-                return;
-            }
-
             try {
-                const response = await mercado.OrdersAPI.getById(orderId, token);
+                let targetOrderId = String(orderId || '').trim();
+                let targetToken = String(token || '').trim();
+
+                if (!targetOrderId) {
+                    const myOrders = await mercado.OrdersAPI.getMy();
+                    const selected = pickBestTrackingOrder(myOrders);
+                    if (!selected?.id) {
+                        setOrder(null);
+                        setError('Aun no tienes pedidos para seguimiento.');
+                        return;
+                    }
+
+                    targetOrderId = String(selected.id);
+                    targetToken = String(selected.tracking_token || '');
+
+                    if (typeof window !== 'undefined') {
+                        const params = new URLSearchParams(window.location.search);
+                        params.set('id', targetOrderId);
+                        if (targetToken) params.set('token', targetToken);
+                        else params.delete('token');
+                        window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+                    }
+                }
+
+                const response = await mercado.OrdersAPI.getById(targetOrderId, targetToken);
                 setOrder(response);
                 setError('');
             } catch (loadError) {

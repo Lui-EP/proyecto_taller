@@ -134,6 +134,31 @@
     margin-bottom: var(--spacing-xl);
 }
 
+.seller-orders-switch,
+.seller-location-warning {
+    background-color: var(--white);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--sand);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+}
+
+.seller-orders-switch-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.seller-location-warning h3 {
+    margin-bottom: 0.35rem;
+}
+
+.seller-location-warning p {
+    color: var(--charcoal-muted);
+    margin-bottom: var(--spacing-sm);
+}
+
 .seller-orders-caption,
 .seller-orders-empty {
     color: var(--charcoal-muted);
@@ -674,6 +699,8 @@
     }
 
     .metric-card,
+    .seller-orders-switch,
+    .seller-location-warning,
     .seller-carts-section,
     .seller-orders-section,
     .pickup-orders-section,

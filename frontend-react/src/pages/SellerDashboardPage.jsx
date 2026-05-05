@@ -76,6 +76,8 @@ export default function SellerDashboardPage() {
 
     const [currentProductImages, setCurrentProductImages] = useState([]);
     const [selectedImageFiles, setSelectedImageFiles] = useState([]);
+    const [savingProduct, setSavingProduct] = useState(false);
+    const [ordersView, setOrdersView] = useState('carts');
 
     const canAccess = useMemo(
         () => ['seller', 'admin'].includes(session.user?.role || ''),
@@ -89,6 +91,26 @@ export default function SellerDashboardPage() {
         session.user?.seller_profile?.business_name ||
         session.user?.name ||
         'Vendedor';
+
+    const sortedActiveCarts = useMemo(
+        () => [...activeCarts].sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0)),
+        [activeCarts]
+    );
+    const sortedSellerOrders = useMemo(
+        () => [...sellerOrders].sort((a, b) => new Date(b.created_at || b.updated_at || 0) - new Date(a.created_at || a.updated_at || 0)),
+        [sellerOrders]
+    );
+    const sortedPickupPendingOrders = useMemo(
+        () => [...pickupPendingOrders].sort((a, b) => new Date(b.pickup_reserved_until || b.created_at || 0) - new Date(a.pickup_reserved_until || a.created_at || 0)),
+        [pickupPendingOrders]
+    );
+    const hasValidStoreLocation = useMemo(() => {
+        const raw = String(session.user?.seller_profile?.location || profileForm.location || '').trim().toLowerCase();
+        if (!raw) return false;
+        if (raw.includes('por confirmar')) return false;
+        if (raw === 'chiapas, mexico' || raw === 'chiapas mexico') return false;
+        return raw.length >= 8;
+    }, [profileForm.location, session.user?.seller_profile?.location]);
 
     const loadData = useCallback(async () => {
         try {
@@ -244,12 +266,20 @@ export default function SellerDashboardPage() {
 
     const saveProduct = async (event) => {
         event.preventDefault();
+        if (savingProduct) return;
 
         if (!productForm.name.trim() || !productForm.description.trim() || !productForm.category_id || !productForm.price) {
             mercado.showToast('Completa nombre, descripcion, categoria y precio', 'error');
             return;
         }
 
+        const hasAnyImage = selectedImageFiles.length > 0 || currentProductImages.length > 0;
+        if (!productForm.id && !hasAnyImage) {
+            mercado.showToast('Debes agregar al menos una imagen para publicar el producto', 'error');
+            return;
+        }
+
+        setSavingProduct(true);
         try {
             const uploadedImages = await uploadSelectedImages();
             const images = productForm.id
@@ -281,6 +311,8 @@ export default function SellerDashboardPage() {
             await loadData();
         } catch (error) {
             mercado.showToast(error.message || 'Error al guardar producto', 'error');
+        } finally {
+            setSavingProduct(false);
         }
     };
 
@@ -537,20 +569,58 @@ export default function SellerDashboardPage() {
                         </div>
                     </div>
 
+                    {!hasValidStoreLocation ? (
+                        <section className="card seller-location-warning">
+                            <h3>Configura la direccion de tu tienda</h3>
+                            <p>
+                                Para que los clientes puedan usar "Recoger en tienda", primero guarda una direccion valida
+                                en tu perfil de vendedor.
+                            </p>
+                            <button className="btn btn-primary btn-sm" type="button" onClick={openProfileModal}>
+                                Completar direccion de tienda
+                            </button>
+                        </section>
+                    ) : null}
+
+                    <section className="seller-orders-switch card">
+                        <div className="seller-orders-switch-row">
+                            <button
+                                type="button"
+                                className={`btn btn-sm ${ordersView === 'carts' ? 'btn-primary' : 'btn-secondary'}`}
+                                onClick={() => setOrdersView('carts')}
+                            >
+                                Carritos activos
+                            </button>
+                            <button
+                                type="button"
+                                className={`btn btn-sm ${ordersView === 'tracking' ? 'btn-primary' : 'btn-secondary'}`}
+                                onClick={() => setOrdersView('tracking')}
+                            >
+                                Seguimiento de pedidos
+                            </button>
+                        </div>
+                        <p className="seller-orders-caption">
+                            {ordersView === 'carts'
+                                ? 'Vista de carritos antes de confirmar pago.'
+                                : 'Vista de pedidos confirmados y su avance.'}
+                        </p>
+                    </section>
+
+                    {ordersView === 'carts' ? (
                     <section className="seller-carts-section">
                         <div className="section-header-row">
                             <div>
                                 <h2>Carritos activos</h2>
                                 <p className="seller-orders-caption">Productos agregados por clientes antes de confirmar el pago.</p>
                             </div>
-                            <span className="products-count">{activeCarts.length} carrito(s)</span>
+                            <span className="products-count">{sortedActiveCarts.length} carrito(s)</span>
                         </div>
 
-                        {!activeCarts.length ? (
+                        {!sortedActiveCarts.length ? (
                             <p className="seller-orders-empty">Aun no hay carritos activos con tus productos.</p>
                         ) : (
                             <div className="seller-orders-grid">
-                                {activeCarts.map((cart) => (
+                                {sortedActiveCarts.map((cart) => (
                                     <article className="seller-order-card" key={cart.id}>
                                         <div className="seller-order-head">
                                             <div>
@@ -596,21 +666,23 @@ export default function SellerDashboardPage() {
                             </div>
                         )}
                     </section>
+                    ) : null}
 
+                    {ordersView === 'tracking' ? (
                     <section className="seller-orders-section" id="seguimiento-pedidos">
                         <div className="section-header-row">
                             <div>
                                 <h2>Seguimiento de pedidos</h2>
                                 <p className="seller-orders-caption">Aqui ves compras ya confirmadas del carrito y su estado de avance.</p>
                             </div>
-                            <span className="products-count">{sellerOrders.length} pedido(s)</span>
+                            <span className="products-count">{sortedSellerOrders.length} pedido(s)</span>
                         </div>
 
-                        {!sellerOrders.length ? (
+                        {!sortedSellerOrders.length ? (
                             <p className="seller-orders-empty">Aun no tienes pedidos confirmados.</p>
                         ) : (
                             <div className="seller-orders-grid">
-                                {sellerOrders.map((order) => {
+                                {sortedSellerOrders.map((order) => {
                                     const myItems = getOrderItemsForSeller(order);
                                     const sellerTotal = getSellerOrderTotal(order);
                                     const sellerUnits = getSellerOrderUnits(order);
@@ -666,18 +738,20 @@ export default function SellerDashboardPage() {
                             </div>
                         )}
                     </section>
+                    ) : null}
 
+                    {ordersView === 'tracking' ? (
                     <section className="pickup-orders-section">
                         <div className="section-header-row">
                             <h2>Compras pendientes para recoger</h2>
-                            <span className="products-count">{pickupPendingOrders.length} pendiente(s)</span>
+                            <span className="products-count">{sortedPickupPendingOrders.length} pendiente(s)</span>
                         </div>
 
-                        {!pickupPendingOrders.length ? (
+                        {!sortedPickupPendingOrders.length ? (
                             <p className="pickup-orders-empty">No hay apartados pendientes por atender.</p>
                         ) : (
                             <div className="pickup-orders-list">
-                                {pickupPendingOrders.map((order) => {
+                                {sortedPickupPendingOrders.map((order) => {
                                     const myItems = getOrderItemsForSeller(order)
                                         .filter((item) => !item.stock_released && !item.picked_up);
                                     if (!myItems.length) return null;
@@ -727,6 +801,7 @@ export default function SellerDashboardPage() {
                             </div>
                         )}
                     </section>
+                    ) : null}
 
                     <section className="products-list-section">
                         <div className="section-header-row">
@@ -885,6 +960,9 @@ export default function SellerDashboardPage() {
                                     onChange={onFilesChange}
                                 />
                                 <small className="product-images-help">Puedes seleccionar varias imagenes desde tu equipo.</small>
+                                {!productForm.id ? (
+                                    <small className="product-images-help">Para publicar un producto nuevo, la imagen es obligatoria.</small>
+                                ) : null}
                                 <div className="selected-images-preview">{selectedImagesText}</div>
                             </div>
 
@@ -904,7 +982,9 @@ export default function SellerDashboardPage() {
 
                             <div className="modal-footer modal-footer-clean">
                                 <button className="btn btn-secondary" type="button" onClick={closeProductModal}>Cancelar</button>
-                                <button className="btn btn-primary" type="submit">Guardar Producto</button>
+                                <button className="btn btn-primary" type="submit" disabled={savingProduct}>
+                                    {savingProduct ? 'Guardando...' : 'Guardar Producto'}
+                                </button>
                             </div>
                         </form>
                     </div>

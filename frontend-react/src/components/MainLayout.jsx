@@ -17,6 +17,10 @@ export default function MainLayout({ children }) {
     const session = useSession();
     const navigate = useNavigate();
     const location = useLocation();
+    const trackingStorageKey = useMemo(
+        () => `ml_tracking_href_${String(session.user?.id || 'anon')}`,
+        [session.user?.id]
+    );
 
     useEffect(() => {
         let cancelled = false;
@@ -28,6 +32,13 @@ export default function MainLayout({ children }) {
                 return;
             }
 
+            if (typeof window !== 'undefined') {
+                const savedHref = String(window.localStorage.getItem(trackingStorageKey) || '').trim();
+                if (savedHref) {
+                    setTrackingHref(savedHref);
+                }
+            }
+
             try {
                 const mercado = getMercadoLocal();
                 const response = await mercado.OrdersAPI.getMy();
@@ -37,9 +48,10 @@ export default function MainLayout({ children }) {
                 const activeOrder = list
                     .filter((order) => {
                         const status = normalizeOrderStatus(order?.status);
+                        const isActiveStatus = status !== 'entregado' && status !== 'cancelado_no_show';
                         const isPickupPending = String(order?.delivery_method || '').toLowerCase() === 'pickup'
                             && String(order?.pickup_status || '').toLowerCase() === 'pendiente_recoleccion';
-                        return status === 'en_transito' || isPickupPending;
+                        return isActiveStatus || isPickupPending;
                     })
                     .sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0))[0];
 
@@ -52,9 +64,14 @@ export default function MainLayout({ children }) {
                 if (activeOrder.tracking_token) {
                     params.set('token', activeOrder.tracking_token);
                 }
-                setTrackingHref(`/seguimiento-cliente?${params.toString()}`);
+                const href = `/seguimiento-cliente?${params.toString()}`;
+                setTrackingHref(href);
+                if (typeof window !== 'undefined') {
+                    window.localStorage.setItem(trackingStorageKey, href);
+                }
             } catch {
-                if (!cancelled) setTrackingHref('');
+                // Conserva el enlace actual si hay un fallo temporal de red/API
+                // para no desaparecer la opción de seguimiento del menú.
             }
         }
 
@@ -63,7 +80,7 @@ export default function MainLayout({ children }) {
         return () => {
             cancelled = true;
         };
-    }, [session.user, session.user?.id, session.user?.role, location.pathname]);
+    }, [session.user, session.user?.id, session.user?.role, location.pathname, trackingStorageKey]);
 
     const links = useMemo(() => {
         const items = [{ to: '/catalogo', matchPath: '/catalogo', label: '🏪 Catálogo' }];
@@ -85,8 +102,8 @@ export default function MainLayout({ children }) {
             });
         }
 
-        if (session.user?.role === 'buyer' && trackingHref) {
-            items.push({ to: trackingHref, matchPath: '/seguimiento-cliente', label: '📍 Seguimiento' });
+        if (session.user?.role === 'buyer') {
+            items.push({ to: trackingHref || '/seguimiento-cliente', matchPath: '/seguimiento-cliente', label: '📍 Seguimiento' });
         }
 
         if (session.user?.role === 'courier') {
@@ -155,8 +172,8 @@ export default function MainLayout({ children }) {
 
     const mobileAccountAction = useMemo(() => {
         if (!session.user) return { to: '/registro', matchPath: '/registro', icon: '👤', label: 'Cuenta' };
-        if (session.user?.role === 'buyer' && trackingHref) {
-            return { to: trackingHref, matchPath: '/seguimiento-cliente', icon: '📍', label: 'Seguir' };
+        if (session.user?.role === 'buyer') {
+            return { to: trackingHref || '/seguimiento-cliente', matchPath: '/seguimiento-cliente', icon: '📍', label: 'Seguir' };
         }
         if (session.user?.role === 'courier') {
             return { to: '/historial', matchPath: '/historial', icon: '🕘', label: 'Historial' };
@@ -264,8 +281,8 @@ export default function MainLayout({ children }) {
                                             <span>🛒</span> Carrito {session.cartCount > 0 ? `(${session.cartCount})` : ''}
                                         </Link>
                                     ) : null}
-                                    {session.user?.role === 'buyer' && trackingHref ? (
-                                        <Link to={trackingHref} className="dropdown-item" onClick={() => setMenuOpen(false)}>
+                                    {session.user?.role === 'buyer' ? (
+                                        <Link to={trackingHref || '/seguimiento-cliente'} className="dropdown-item" onClick={() => setMenuOpen(false)}>
                                             <span>📍</span> Seguimiento
                                         </Link>
                                     ) : null}
