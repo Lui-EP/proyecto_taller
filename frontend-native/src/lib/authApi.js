@@ -29,14 +29,6 @@ async function request(path, options = {}) {
   return json;
 }
 
-export async function listDemoUsers(params = {}) {
-  const query = new URLSearchParams();
-  if (params.role) query.set('role', params.role);
-  const suffix = query.toString() ? `?${query.toString()}` : '';
-  const json = await request(`/usuarios-app/demo${suffix}`);
-  return json.users || [];
-}
-
 export async function listUsers(params = {}) {
   const query = new URLSearchParams();
   if (params.role) query.set('role', params.role);

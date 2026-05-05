@@ -47,6 +47,15 @@ function orderMethodBadge(method) {
         : <span className="badge badge-info">Entrega a domicilio</span>;
 }
 
+function orderStatusLabel(status) {
+    const safe = String(status || '').toLowerCase();
+    if (safe === 'pedido_realizado') return 'Pedido realizado';
+    if (safe === 'en_transito') return 'En transito';
+    if (safe === 'entregado') return 'Entregado';
+    if (safe === 'cancelado_no_show') return 'Cliente no vino';
+    return 'Sin estado';
+}
+
 export default function SellerDashboardPage() {
     const session = useSession();
     const navigate = useNavigate();
@@ -111,6 +120,23 @@ export default function SellerDashboardPage() {
         if (raw === 'chiapas, mexico' || raw === 'chiapas mexico') return false;
         return raw.length >= 8;
     }, [profileForm.location, session.user?.seller_profile?.location]);
+
+    useEffect(() => {
+        const applyViewFromHash = () => {
+            const hash = String(window.location.hash || '').toLowerCase();
+            if (hash.includes('pendientes-recoger')) {
+                setOrdersView('pending');
+                return;
+            }
+            if (hash.includes('seguimiento-pedidos')) {
+                setOrdersView('tracking');
+            }
+        };
+
+        applyViewFromHash();
+        window.addEventListener('hashchange', applyViewFromHash);
+        return () => window.removeEventListener('hashchange', applyViewFromHash);
+    }, []);
 
     const loadData = useCallback(async () => {
         try {
@@ -434,6 +460,16 @@ export default function SellerDashboardPage() {
     const getSellerOrderUnits = (order) => getOrderItemsForSeller(order)
         .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
+    const visiblePickupPendingOrders = useMemo(
+        () => sortedPickupPendingOrders
+            .map((order) => ({
+                ...order,
+                my_items_pending: getOrderItemsForSeller(order).filter((item) => !item.stock_released && !item.picked_up),
+            }))
+            .filter((order) => order.my_items_pending.length > 0),
+        [sortedPickupPendingOrders]
+    );
+
     const getOrderLocationLabel = (order) => {
         if (String(order?.delivery_method || '').toLowerCase() === 'pickup') {
             return order?.pickup_point?.location || 'Ubicacion de tienda por confirmar';
@@ -587,22 +623,42 @@ export default function SellerDashboardPage() {
                             <button
                                 type="button"
                                 className={`btn btn-sm ${ordersView === 'carts' ? 'btn-primary' : 'btn-secondary'}`}
-                                onClick={() => setOrdersView('carts')}
+                                onClick={() => {
+                                    setOrdersView('carts');
+                                    if (window.location.hash) {
+                                        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                                    }
+                                }}
                             >
                                 Carritos activos
                             </button>
                             <button
                                 type="button"
                                 className={`btn btn-sm ${ordersView === 'tracking' ? 'btn-primary' : 'btn-secondary'}`}
-                                onClick={() => setOrdersView('tracking')}
+                                onClick={() => {
+                                    setOrdersView('tracking');
+                                    window.location.hash = 'seguimiento-pedidos';
+                                }}
                             >
                                 Seguimiento de pedidos
+                            </button>
+                            <button
+                                type="button"
+                                className={`btn btn-sm ${ordersView === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
+                                onClick={() => {
+                                    setOrdersView('pending');
+                                    window.location.hash = 'pendientes-recoger';
+                                }}
+                            >
+                                Pendientes por recoger
                             </button>
                         </div>
                         <p className="seller-orders-caption">
                             {ordersView === 'carts'
                                 ? 'Vista de carritos antes de confirmar pago.'
-                                : 'Vista de pedidos confirmados y su avance.'}
+                                : ordersView === 'tracking'
+                                    ? 'Vista de pedidos confirmados y su avance.'
+                                    : 'Lista de clientes que deben recoger en tienda y confirmacion de entrega.'}
                         </p>
                     </section>
 
@@ -729,7 +785,9 @@ export default function SellerDashboardPage() {
                                             </div>
 
                                             <div className="seller-order-foot">
-                                                <span>{sellerUnits} unidad(es) tuyas en este pedido</span>
+                                                <span>
+                                                    {sellerUnits} unidad(es) tuyas en este pedido · Estado: {orderStatusLabel(order.status)}
+                                                </span>
                                                 <strong>{mercado.formatPrice(sellerTotal)}</strong>
                                             </div>
                                         </article>
@@ -740,22 +798,19 @@ export default function SellerDashboardPage() {
                     </section>
                     ) : null}
 
-                    {ordersView === 'tracking' ? (
-                    <section className="pickup-orders-section">
+                    {ordersView === 'pending' ? (
+                    <section className="pickup-orders-section" id="pendientes-recoger">
                         <div className="section-header-row">
                             <h2>Compras pendientes para recoger</h2>
-                            <span className="products-count">{sortedPickupPendingOrders.length} pendiente(s)</span>
+                            <span className="products-count">{visiblePickupPendingOrders.length} pendiente(s)</span>
                         </div>
 
-                        {!sortedPickupPendingOrders.length ? (
+                        {!visiblePickupPendingOrders.length ? (
                             <p className="pickup-orders-empty">No hay apartados pendientes por atender.</p>
                         ) : (
                             <div className="pickup-orders-list">
-                                {sortedPickupPendingOrders.map((order) => {
-                                    const myItems = getOrderItemsForSeller(order)
-                                        .filter((item) => !item.stock_released && !item.picked_up);
-                                    if (!myItems.length) return null;
-
+                                {visiblePickupPendingOrders.map((order) => {
+                                    const myItems = order.my_items_pending || [];
                                     return (
                                         <article className="pickup-order-card" key={order.id}>
                                             <div className="pickup-order-head">

@@ -1,5 +1,4 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { productImages } from '../data/demoData';
 import {
   createProduct as createProductApi,
   listCategories as listCategoriesApi,
@@ -26,10 +25,15 @@ function normalizeCategory(category = {}) {
   };
 }
 
+function buildPlaceholder(name = 'Producto') {
+  const label = encodeURIComponent(String(name || 'Producto').trim() || 'Producto');
+  return `https://placehold.co/720x720/f2e5cf/6c4724?text=${label}`;
+}
+
 function inferImage(rawProduct = {}) {
-  if (rawProduct.imageData) return { uri: rawProduct.imageData };
-  const key = String(rawProduct.imageKey || '').trim().toLowerCase();
-  return productImages[key] || productImages.canastas;
+  const direct = String(rawProduct.imageData || rawProduct.image || rawProduct.image_url || rawProduct.imageUrl || '').trim();
+  if (direct) return { uri: direct };
+  return { uri: buildPlaceholder(rawProduct.name || 'Producto') };
 }
 
 function resolveProduct(rawProduct = {}) {

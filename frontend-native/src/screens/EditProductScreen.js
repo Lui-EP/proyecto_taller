@@ -4,13 +4,15 @@ import * as ImagePicker from 'expo-image-picker';
 import ScreenContainer from '../components/ScreenContainer';
 import FadeInView from '../components/FadeInView';
 import MotionPressable from '../components/MotionPressable';
-import { productImages } from '../data/demoData';
 import { colors, radius, shadows, spacing, typography } from '../theme';
 import { useProducts } from '../context/ProductsContext';
 import { useSession } from '../context/SessionContext';
 import { hapticError, hapticSuccess, hapticWarning } from '../lib/haptics';
 
-const imageOptions = Object.entries(productImages).map(([key, image]) => ({ key, image }));
+function buildPlaceholder(name = 'Producto') {
+  const label = encodeURIComponent(String(name || 'Producto').trim() || 'Producto');
+  return { uri: `https://placehold.co/720x720/f2e5cf/6c4724?text=${label}` };
+}
 
 export default function EditProductScreen({ route, navigation }) {
   const { productId } = route.params || {};
@@ -25,7 +27,7 @@ export default function EditProductScreen({ route, navigation }) {
   const [description, setDescription] = useState(product?.description || '');
   const [category, setCategory] = useState(product?.category || categoryOptions[0]?.id || 'artesanias');
   const [featured, setFeatured] = useState(Boolean(product?.featured));
-  const [imageKey, setImageKey] = useState(product?.imageKey || imageOptions[0]?.key || 'canastas');
+  const [imageKey, setImageKey] = useState(product?.imageKey || '');
   const [imageData, setImageData] = useState(product?.imageData || '');
   const [saving, setSaving] = useState(false);
 
@@ -37,7 +39,9 @@ export default function EditProductScreen({ route, navigation }) {
     );
   }
 
-  const previewSource = imageData ? { uri: imageData } : productImages[imageKey] || imageOptions[0]?.image;
+  const previewSource = imageData
+    ? { uri: imageData }
+    : (product?.image || (imageKey ? { uri: imageKey } : buildPlaceholder(name || product?.name || 'Producto')));
 
   const handlePickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -92,11 +96,6 @@ export default function EditProductScreen({ route, navigation }) {
     const nextImageData = `data:${mimeType};base64,${asset.base64}`;
     setImageData(nextImageData);
     setImageKey('');
-  };
-
-  const handleChoosePreset = (nextImageKey) => {
-    setImageKey(nextImageKey);
-    setImageData('');
   };
 
   const handleSave = async () => {
@@ -189,16 +188,6 @@ export default function EditProductScreen({ route, navigation }) {
               <MotionPressable style={styles.cameraButton} onPress={handleTakePhoto}>
                 <Text style={styles.cameraButtonText}>Tomar foto</Text>
               </MotionPressable>
-            </View>
-            <View style={styles.imagePickerGrid}>
-              {imageOptions.map((option) => {
-                const active = !imageData && option.key === imageKey;
-                return (
-                  <MotionPressable key={option.key} style={[styles.imageOption, active && styles.imageOptionActive]} onPress={() => handleChoosePreset(option.key)}>
-                    <Image source={option.image} style={styles.imageThumb} resizeMode="cover" />
-                  </MotionPressable>
-                );
-              })}
             </View>
           </Field>
 
@@ -319,26 +308,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cameraButtonText: { color: colors.white, fontWeight: '700' },
-  imagePickerGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  imageOption: {
-    borderRadius: radius.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    padding: 3,
-  },
-  imageOptionActive: {
-    borderColor: colors.primary,
-  },
-  imageThumb: {
-    width: 62,
-    height: 62,
-    borderRadius: radius.sm,
-  },
   input: {
     backgroundColor: colors.card,
     borderWidth: 1,

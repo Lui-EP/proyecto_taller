@@ -101,7 +101,7 @@ Si quieres flujo "solo AWS":
 - Panel repartidor (tomar pedido, mover estado, compartir ubicacion)
 - Panel admin (usuarios, pedidos, actividad)
 
-## 7) Cuentas demo
+## 7) Usuarios de prueba (en backend)
 
 - `admin@mercadolocal.mx` / `123456`
 - `vendedor@mercadolocal.mx` / `123456`

@@ -1,9 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { listDemoUsers, loginRequest, registerRequest } from '../lib/authApi';
+import { listUsers, loginRequest, registerRequest } from '../lib/authApi';
 import { setAuthToken } from '../lib/httpAuth';
 
 const SessionContext = createContext(null);
-const DEFAULT_DEMO_PASSWORD = `${process.env.EXPO_PUBLIC_DEMO_PASSWORD || '123456'}`.trim() || '123456';
 
 function createGuestId() {
   return `guest-device-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -18,7 +17,6 @@ function normalizeUser(user) {
     role: user.role || 'buyer',
     phone: user.phone || user.telefono || '',
     address: user.address || user.direccion || '',
-    password: user.password || DEFAULT_DEMO_PASSWORD,
     active: user.active ?? user.activo ?? true,
   };
 }
@@ -31,7 +29,7 @@ export function SessionProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   const refreshUsers = useCallback(async () => {
-    const remoteUsers = (await listDemoUsers()).map(normalizeUser);
+    const remoteUsers = (await listUsers()).map(normalizeUser);
     setUsers(remoteUsers);
     return remoteUsers;
   }, []);
@@ -93,7 +91,7 @@ export function SessionProvider({ children }) {
   const loginAsRole = async (role) => {
     const found = users.find((item) => item.role === role);
     if (!found) throw new Error('Rol no disponible');
-    return login(found.email, found.password || DEFAULT_DEMO_PASSWORD);
+    throw new Error('Seleccion de rol deshabilitada: inicia sesion con correo y contraseña reales.');
   };
 
   const logout = async () => {
@@ -106,7 +104,6 @@ export function SessionProvider({ children }) {
     user,
     token,
     users,
-    demoUsers: users,
     guestId,
     source: token ? 'remote-auth' : 'remote',
     ready,
