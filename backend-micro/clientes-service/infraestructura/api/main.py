@@ -645,6 +645,13 @@ def listar_productos(
     query = db.query(Producto)
     if seller_id:
         query = query.filter(Producto.seller_id == seller_id)
+    else:
+        # Public catalog: only products from active sellers.
+        active_seller_ids = db.query(UsuarioApp.usuario_id).filter(
+            UsuarioApp.role == 'seller',
+            UsuarioApp.activo.is_(True),
+        )
+        query = query.filter(Producto.seller_id.in_(active_seller_ids))
     if status_value:
         query = query.filter(Producto.status == str(status_value).strip().lower())
     elif not include_all_status and not seller_id:
