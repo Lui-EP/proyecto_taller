@@ -1312,8 +1312,6 @@ export default function CheckoutPage() {
             await mercado.clearCart();
             session.syncState();
 
-            window.alert('Tu solicitud ha sido enviada por favor');
-
             const params = new URLSearchParams({ id: order.id });
             if (order.guest_token) params.set('token', order.guest_token);
             navigate(`/seguimiento-cliente?${params.toString()}`);
@@ -1407,7 +1405,15 @@ export default function CheckoutPage() {
                             <button
                                 type="button"
                                 className={`delivery-method-btn ${deliveryMethod === 'pickup' ? 'is-active' : ''}`}
-                                onClick={() => setDeliveryMethod('pickup')}
+                                onClick={() => {
+                                    setDeliveryMethod('pickup');
+                                    setCustomer((prev) => ({ ...prev, address: '' }));
+                                    setDetectedAddress('');
+                                    setDetectedColony('');
+                                    setDetectedSubdivision('');
+                                    setCustomerLocation(null);
+                                    setLocationStatus('idle');
+                                }}
                             >
                                 🏪 Recoger en tienda
                             </button>
