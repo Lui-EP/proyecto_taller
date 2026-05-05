@@ -368,6 +368,19 @@
     color: var(--terracotta);
 }
 
+.review-gated-box {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.review-gated-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
 /* Report Modal */
 .report-modal-content {
     padding: var(--spacing-lg);

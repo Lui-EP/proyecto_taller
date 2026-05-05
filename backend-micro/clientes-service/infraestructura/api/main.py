@@ -1,6 +1,10 @@
 import base64
+import json
 import os
 from datetime import datetime, timedelta, timezone
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 from uuid import uuid4
 
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, status
@@ -34,6 +38,7 @@ JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', '').strip()
 JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256').strip()
 JWT_EXPIRE_MINUTES = int(os.getenv('JWT_EXPIRE_MINUTES', '120'))
 PASSWORD_HASH_ROUNDS = int(os.getenv('PASSWORD_HASH_ROUNDS', '29000'))
+PEDIDOS_SERVICE_URL = os.getenv('PEDIDOS_SERVICE_URL', 'http://127.0.0.1:8002').strip().rstrip('/')
 
 app.add_middleware(
     CORSMiddleware,
@@ -154,6 +159,72 @@ def normalize_role(value: str) -> str:
 
 def role_id_prefix(role: str) -> str:
     return ROLE_ID_PREFIX.get(normalize_role(role), 'comprador')
+
+
+def _build_auth_headers(token: str | None = None) -> dict[str, str]:
+    headers = {'Accept': 'application/json'}
+    safe_token = str(token or '').strip()
+    if safe_token:
+        headers['Authorization'] = f'Bearer {safe_token}'
+    return headers
+
+
+def _pedidos_url(path: str, query: dict[str, str] | None = None) -> str:
+    safe_path = '/' + str(path or '').lstrip('/')
+    if query:
+        return f'{PEDIDOS_SERVICE_URL}{safe_path}?{urlencode(query)}'
+    return f'{PEDIDOS_SERVICE_URL}{safe_path}'
+
+
+def user_has_purchased_product(user_id: str, product_id: str, token: str | None = None) -> bool:
+    safe_user_id = str(user_id or '').strip()
+    safe_product_id = str(product_id or '').strip()
+    if not safe_user_id or not safe_product_id:
+        return False
+
+    request = Request(
+        _pedidos_url('/pedidos', {'customer_id': safe_user_id}),
+        headers=_build_auth_headers(token),
+        method='GET',
+    )
+
+    try:
+        with urlopen(request, timeout=8) as response:
+            payload = json.loads(response.read().decode('utf-8'))
+    except HTTPError as exc:
+        if exc.code in {401, 403, 404}:
+            return False
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='No se pudo validar el historial de compras en este momento.',
+        ) from exc
+    except (URLError, TimeoutError, json.JSONDecodeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail='No se pudo validar el historial de compras en este momento.',
+        ) from exc
+
+    pedidos = payload.get('pedidos') if isinstance(payload, dict) else []
+    if not isinstance(pedidos, list):
+        return False
+
+    valid_statuses = {'pedido_realizado', 'asignado', 'en_transito', 'listo_recoger', 'entregado'}
+    for pedido in pedidos:
+        if not isinstance(pedido, dict):
+            continue
+        status_value = str(pedido.get('status') or '').strip().lower()
+        if status_value not in valid_statuses:
+            continue
+        items = pedido.get('items')
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            item_product_id = str(item.get('productId') or item.get('product_id') or '').strip()
+            if item_product_id and item_product_id == safe_product_id:
+                return True
+    return False
 
 
 def ensure_jwt_configured() -> None:
@@ -996,11 +1067,42 @@ def eliminar_favorito(
     return {'status': 'ok'}
 
 
+@app.get('/reviews/eligibility')
+def validar_elegibilidad_resena(
+    product_id: str = Query(..., min_length=2, max_length=60),
+    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+):
+    safe_product_id = str(product_id or '').strip()
+    if not safe_product_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Producto invalido')
+
+    if normalize_role(usuario.role) == 'admin':
+        return {
+            'status': 'ok',
+            'can_review': True,
+            'requires_login': False,
+            'requires_purchase': False,
+            'message': 'Puedes reseñar este producto.',
+        }
+
+    token = credentials.credentials if credentials and credentials.scheme.lower() == 'bearer' else None
+    can_review = user_has_purchased_product(usuario.usuario_id, safe_product_id, token)
+    return {
+        'status': 'ok',
+        'can_review': bool(can_review),
+        'requires_login': False,
+        'requires_purchase': not bool(can_review),
+        'message': 'Puedes reseñar este producto.' if can_review else 'Solo puedes reseñar productos que ya compraste.',
+    }
+
+
 @app.post('/reviews')
 def crear_resena(
     payload: ReviewIn,
     db: Session = Depends(get_session),
     usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
 ):
     user_id = payload.user_id
     if normalize_role(usuario.role) != 'admin':
@@ -1012,6 +1114,16 @@ def crear_resena(
     product = db.get(Producto, payload.product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
+
+    if normalize_role(usuario.role) != 'admin':
+        token = credentials.credentials if credentials and credentials.scheme.lower() == 'bearer' else None
+        can_review = user_has_purchased_product(user_id, payload.product_id, token)
+        if not can_review:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='Solo puedes reseñar productos que ya compraste.',
+            )
+
     review = Resena(
         product_id=payload.product_id,
         user_id=user_id,

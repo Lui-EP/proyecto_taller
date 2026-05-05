@@ -31,6 +31,7 @@ services:
       POSTGRES_DB: bd_clientes_ms
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: pERSONAL04
+      PEDIDOS_SERVICE_URL: http://pedidos-service:8002
       ENABLE_RABBIT: 'false'
     depends_on:
       - postgres-micro

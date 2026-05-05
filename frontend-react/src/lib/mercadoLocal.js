@@ -734,6 +734,12 @@ function createMercadoLocal() {
             }),
         });
     };
+    mercado.ReviewsAPI.getEligibility = async (productId) => {
+        requireAuthenticatedUser();
+        const safeProductId = normalizeText(productId, '');
+        if (!safeProductId) throw new Error('Producto invalido');
+        return fetchJson(CLIENTES_API_URL, `/reviews/eligibility?product_id=${encodeURIComponent(safeProductId)}`);
+    };
 
     mercado.ReportsAPI.create = async (data) => {
         const user = requireAuthenticatedUser();

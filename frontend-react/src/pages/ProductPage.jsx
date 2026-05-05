@@ -31,6 +31,11 @@ export default function ProductPage() {
     const [report, setReport] = useState({ reason: 'fake', description: '' });
     const [visibleReviewsCount, setVisibleReviewsCount] = useState(REVIEWS_PAGE_SIZE);
     const [highlightedReviewId, setHighlightedReviewId] = useState('');
+    const [reviewEligibility, setReviewEligibility] = useState({
+        loading: false,
+        canReview: false,
+        message: 'Inicia sesión para dejar una reseña.',
+    });
 
     const images = useMemo(() => {
         if (!product) return [];
@@ -101,6 +106,62 @@ export default function ProductPage() {
         return () => window.clearTimeout(timer);
     }, [product, targetReviewParam]);
 
+    useEffect(() => {
+        let cancelled = false;
+
+        async function validateReviewEligibility() {
+            if (!product?.id) {
+                if (!cancelled) {
+                    setReviewEligibility({
+                        loading: false,
+                        canReview: false,
+                        message: 'Selecciona un producto para reseñar.',
+                    });
+                }
+                return;
+            }
+
+            if (!session.user) {
+                if (!cancelled) {
+                    setReviewEligibility({
+                        loading: false,
+                        canReview: false,
+                        message: 'Inicia sesión para dejar una reseña.',
+                    });
+                }
+                return;
+            }
+
+            if (!cancelled) {
+                setReviewEligibility((prev) => ({ ...prev, loading: true }));
+            }
+
+            try {
+                const eligibility = await mercado.ReviewsAPI.getEligibility(product.id);
+                if (!cancelled) {
+                    setReviewEligibility({
+                        loading: false,
+                        canReview: Boolean(eligibility?.can_review),
+                        message: String(eligibility?.message || ''),
+                    });
+                }
+            } catch (error) {
+                if (!cancelled) {
+                    setReviewEligibility({
+                        loading: false,
+                        canReview: false,
+                        message: String(error?.message || 'No pudimos validar tu historial de compra.'),
+                    });
+                }
+            }
+        }
+
+        validateReviewEligibility();
+        return () => {
+            cancelled = true;
+        };
+    }, [mercado, product?.id, session.user]);
+
     const buyNow = async () => {
         if (!product) return;
         await mercado.addProductToCart(product.id, 1);
@@ -143,6 +204,11 @@ export default function ProductPage() {
 
         if (!review.rating) {
             mercado.showToast('Selecciona una calificación', 'error');
+            return;
+        }
+
+        if (!reviewEligibility.canReview) {
+            mercado.showToast(reviewEligibility.message || 'Solo puedes reseñar productos que ya compraste.', 'error');
             return;
         }
 
@@ -378,37 +444,57 @@ export default function ProductPage() {
                             <div className="write-review-card" id="review-form-container">
                                 {session.user ? (
                                     <>
-                                        <h3>Deja tu reseña</h3>
-                                        <form onSubmit={submitReview}>
-                                            <div className="rating-input">
-                                                <label>Tu calificación</label>
-                                                <div className="star-rating">
-                                                    {[1, 2, 3, 4, 5].map((value) => (
-                                                        <button
-                                                            key={value}
-                                                            type="button"
-                                                            className={`star ${review.rating >= value ? 'filled' : ''}`}
-                                                            onClick={() => setReview((prev) => ({ ...prev, rating: value }))}
-                                                        >
-                                                            ★
-                                                        </button>
-                                                    ))}
+                                        {reviewEligibility.loading ? (
+                                            <p className="review-login-hint">Validando si ya compraste este producto...</p>
+                                        ) : reviewEligibility.canReview ? (
+                                            <>
+                                                <h3>Deja tu reseña</h3>
+                                                <form onSubmit={submitReview}>
+                                                    <div className="rating-input">
+                                                        <label>Tu calificación</label>
+                                                        <div className="star-rating">
+                                                            {[1, 2, 3, 4, 5].map((value) => (
+                                                                <button
+                                                                    key={value}
+                                                                    type="button"
+                                                                    className={`star ${review.rating >= value ? 'filled' : ''}`}
+                                                                    onClick={() => setReview((prev) => ({ ...prev, rating: value }))}
+                                                                >
+                                                                    ★
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-group">
+                                                        <label className="form-label">Comentario (opcional)</label>
+                                                        <textarea
+                                                            className="form-input form-textarea"
+                                                            placeholder="Cuéntanos tu experiencia..."
+                                                            value={review.comment}
+                                                            onChange={(event) => setReview((prev) => ({ ...prev, comment: event.target.value }))}
+                                                        ></textarea>
+                                                    </div>
+                                                    <button type="submit" className="btn btn-primary w-full">Enviar Reseña</button>
+                                                </form>
+                                            </>
+                                        ) : (
+                                            <div className="review-gated-box">
+                                                <p className="review-login-hint">{reviewEligibility.message || 'Solo puedes reseñar productos que ya compraste.'}</p>
+                                                <div className="review-gated-actions">
+                                                    <Link to="/historial" className="btn btn-secondary btn-sm">Ver mis compras</Link>
+                                                    <Link to="/catalogo" className="btn btn-outline btn-sm">Seguir comprando</Link>
                                                 </div>
                                             </div>
-                                            <div className="form-group">
-                                                <label className="form-label">Comentario (opcional)</label>
-                                                <textarea
-                                                    className="form-input form-textarea"
-                                                    placeholder="Cuéntanos tu experiencia..."
-                                                    value={review.comment}
-                                                    onChange={(event) => setReview((prev) => ({ ...prev, comment: event.target.value }))}
-                                                ></textarea>
-                                            </div>
-                                            <button type="submit" className="btn btn-primary w-full">Enviar Reseña</button>
-                                        </form>
+                                        )}
                                     </>
                                 ) : (
-                                    <p className="review-login-hint"><Link to="/login" className="review-login-link">Inicia sesión</Link> para dejar una reseña</p>
+                                    <div className="review-gated-box">
+                                        <p className="review-login-hint"><Link to="/login" className="review-login-link">Inicia sesión</Link> para dejar una reseña</p>
+                                        <div className="review-gated-actions">
+                                            <Link to="/login" className="btn btn-secondary btn-sm">Iniciar sesión</Link>
+                                            <Link to="/registro" className="btn btn-primary btn-sm">Crear cuenta</Link>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
 
