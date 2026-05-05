@@ -286,9 +286,9 @@ export default function SellerDashboardPage() {
                 reason: 'feature_request',
                 description: `Solicitud para destacar producto por ${days} dias`
             });
-            mercado.showToast('Solicitud enviada al administrador');
+            window.alert('Tu peticion ha sido enviada al administrador exitosamente. Te notificaremos cuando sea aprobada.');
         } catch (error) {
-            mercado.showToast(error.message || 'Error al enviar solicitud', 'error');
+            window.alert('Error al enviar peticion: ' + (error.message || 'Intenta de nuevo'));
         }
     };
 
