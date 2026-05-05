@@ -488,6 +488,24 @@
     padding: var(--spacing-sm) var(--spacing-md);
 }
 
+.adminx-user-card.is-blocked {
+    background: #f2f2f2;
+    border-color: #c7c7c7;
+    box-shadow: none;
+}
+
+.adminx-user-card.is-blocked .adminx-avatar,
+.adminx-user-card.is-blocked .adminx-meta-item,
+.adminx-user-card.is-blocked .adminx-pill {
+    filter: grayscale(100%);
+}
+
+.adminx-user-card.is-blocked .adminx-title-row h3,
+.adminx-user-card.is-blocked .adminx-subtext,
+.adminx-user-card.is-blocked .adminx-description {
+    color: #666;
+}
+
 .adminx-user-head {
     display: flex;
     align-items: flex-start;

@@ -231,9 +231,10 @@ function ActiveList({ title, items, type }) {
 function UserCard({ user, type, mercado, onStatusChange, onDelete }) {
     const isCourier = type === 'courier';
     const status = String(user.status || '').toLowerCase();
+    const isBlocked = status === 'blocked';
 
     return (
-        <article className="adminx-user-card card" key={user.id}>
+        <article className={`adminx-user-card card ${isBlocked ? 'is-blocked' : ''}`} key={user.id}>
             <div className="adminx-user-head">
                 <div className="adminx-user-main">
                     <div className="adminx-avatar adminx-avatar--large" aria-hidden="true">{String(user.name || 'U').charAt(0).toUpperCase()}</div>
