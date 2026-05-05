@@ -1,6 +1,5 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import L from 'leaflet';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 import { resolveImageSrc } from '../lib/assets';
 import SafeImage from '../components/SafeImage';
@@ -74,12 +73,6 @@ export default function TrackingClientPage() {
     const [clientGeoPermission, setClientGeoPermission] = useState('idle');
     const [routeData, setRouteData] = useState(null);
 
-    const mapRef = useRef(null);
-    const markerRef = useRef(null);
-    const clientMarkerRef = useRef(null);
-    const destinationMarkerRef = useRef(null);
-    const routeLineRef = useRef(null);
-
     const status = useMemo(() => normalizeStatus(order?.status), [order?.status]);
     const isPickup = useMemo(() => String(order?.delivery_method || '').toLowerCase() === 'pickup', [order?.delivery_method]);
     const statusSteps = useMemo(() => (isPickup ? PICKUP_STATUS_ORDER : STATUS_ORDER), [isPickup]);
@@ -134,63 +127,6 @@ export default function TrackingClientPage() {
         }
         return `https://www.google.com/maps?q=${encodeURIComponent(origin)}&z=13&output=embed`;
     }, [destinationLat, destinationLng, hasDestinationPoint, isPickup, pickupAddress, resolvedCourierLat, resolvedCourierLng]);
-
-    useEffect(() => {
-        const map = L.map('tracking-map-react', { attributionControl: false }).setView([DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-        const icon = L.divIcon({
-            className: 'tracking-marker-wrap',
-            html: '<div class="tracking-marker">🛵</div>',
-            iconSize: [56, 56],
-            iconAnchor: [28, 44],
-            popupAnchor: [0, -34],
-        });
-
-        const marker = L.marker([DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng], { icon }).addTo(map);
-        const destinationMarker = L.marker([DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng], {
-            icon: L.divIcon({
-                className: 'tracking-destination-marker-wrap',
-                html: '<div class="tracking-destination-marker">🏠</div>',
-                iconSize: [44, 44],
-                iconAnchor: [22, 38],
-                popupAnchor: [0, -30],
-            }),
-            opacity: 0,
-        }).addTo(map);
-        const routeLine = L.polyline([], {
-            color: '#b47127',
-            weight: 5,
-            opacity: 0.9,
-        }).addTo(map);
-
-        const clientIcon = L.divIcon({
-            className: 'tracking-client-marker-wrap',
-            html: '<div class="tracking-client-marker">📍</div>',
-            iconSize: [44, 44],
-            iconAnchor: [22, 38],
-            popupAnchor: [0, -30],
-        });
-        const clientMarker = L.marker([DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng], {
-            icon: clientIcon,
-            opacity: 0,
-        }).addTo(map);
-
-        mapRef.current = map;
-        markerRef.current = marker;
-        clientMarkerRef.current = clientMarker;
-        destinationMarkerRef.current = destinationMarker;
-        routeLineRef.current = routeLine;
-
-        return () => {
-            map.remove();
-            mapRef.current = null;
-            markerRef.current = null;
-            clientMarkerRef.current = null;
-            destinationMarkerRef.current = null;
-            routeLineRef.current = null;
-        };
-    }, []);
 
     useEffect(() => {
         let timer = null;
@@ -251,49 +187,6 @@ export default function TrackingClientPage() {
     }, [destinationLat, destinationLng, hasDestinationPoint, isPickup, resolvedCourierLat, resolvedCourierLng, routeRequestKey]);
 
     useEffect(() => {
-        if (!order || !mapRef.current || !markerRef.current || !routeLineRef.current || !destinationMarkerRef.current) return;
-
-        const currentStatus = STATUS_LABELS[normalizeStatus(order.status)] || 'Pedido realizado';
-        markerRef.current.setLatLng([resolvedCourierLat, resolvedCourierLng]);
-        markerRef.current.setPopupContent(`<strong>Estado:</strong> ${currentStatus}`);
-
-        if (hasDestinationPoint) {
-            destinationMarkerRef.current.setLatLng([destinationLat, destinationLng]);
-            destinationMarkerRef.current.setOpacity(1);
-            destinationMarkerRef.current.setPopupContent('<strong>Destino de entrega</strong>');
-        } else {
-            destinationMarkerRef.current.setOpacity(0);
-        }
-
-        const routeCoordinates = activeRouteData?.coordinates?.length
-            ? activeRouteData.coordinates
-            : hasDestinationPoint
-                ? buildStraightLineRoute({ lat: resolvedCourierLat, lng: resolvedCourierLng }, { lat: destinationLat, lng: destinationLng }).coordinates
-                : [{ lat: resolvedCourierLat, lng: resolvedCourierLng }];
-
-        routeLineRef.current.setLatLngs(
-            routeCoordinates.map((point) => [Number(point.lat), Number(point.lng)])
-        );
-
-        const boundsPoints = [...routeCoordinates];
-        if (isValidCoords(clientLocation)) boundsPoints.push(clientLocation);
-
-        if (boundsPoints.length > 1) {
-            mapRef.current.fitBounds(
-                boundsPoints.map((point) => [Number(point.lat), Number(point.lng)]),
-                { padding: [40, 40], maxZoom: 15, animate: true }
-            );
-            return;
-        }
-
-        mapRef.current.flyTo([resolvedCourierLat, resolvedCourierLng], Math.max(mapRef.current.getZoom(), 14), {
-            animate: true,
-            duration: 1,
-            easeLinearity: 0.25,
-        });
-    }, [activeRouteData, clientLocation, destinationLat, destinationLng, hasDestinationPoint, order, resolvedCourierLat, resolvedCourierLng]);
-
-    useEffect(() => {
         if (isPickup || !order || clientLocation) return;
         if (!isValidCoords(order?.delivery_location)) return;
 
@@ -303,12 +196,6 @@ export default function TrackingClientPage() {
         };
         setClientLocation(coords);
         setClientGeoPermission((prev) => (prev === 'granted' ? prev : 'from_order'));
-
-        if (clientMarkerRef.current) {
-            clientMarkerRef.current.setLatLng([coords.lat, coords.lng]);
-            clientMarkerRef.current.setOpacity(1);
-            clientMarkerRef.current.setPopupContent('<strong>Ubicacion de entrega confirmada</strong>');
-        }
     }, [clientLocation, isPickup, order]);
 
     const requestClientLocation = () => {
@@ -327,12 +214,6 @@ export default function TrackingClientPage() {
                 };
                 setClientLocation(coords);
                 setClientGeoPermission('granted');
-
-                if (clientMarkerRef.current) {
-                    clientMarkerRef.current.setLatLng([coords.lat, coords.lng]);
-                    clientMarkerRef.current.setOpacity(1);
-                    clientMarkerRef.current.setPopupContent('<strong>Tu ubicacion</strong>');
-                }
 
                 mercado.showToast('Ubicacion del cliente activada');
             },
@@ -472,7 +353,7 @@ export default function TrackingClientPage() {
                             ? `Recorrido restante: ${routeDistanceLabel}${routeDurationLabel !== '--' ? ` · ETA ${routeDurationLabel}` : ''}`
                             : 'Veras el movimiento del repartidor sobre la ruta hacia tu entrega.'}
                     </div>
-                    <div id="tracking-map-react" className="tracking-map" aria-label="Mapa de seguimiento" />
+                    
                     <div className="tracking-google-block">
                         <div className="tracking-google-head">
                             <strong>Vista Google Maps</strong>
@@ -490,4 +371,7 @@ export default function TrackingClientPage() {
         </div>
     );
 }
+
+
+
 

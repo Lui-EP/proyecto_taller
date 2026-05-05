@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import L from 'leaflet';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 import { buildStraightLineRoute, fetchLocationIqRoute, isValidCoords } from '../lib/locationIqRouting';
 
@@ -135,11 +134,6 @@ export default function CourierPage() {
     const [geoPermission, setGeoPermission] = useState('idle');
     const [courierLocation, setCourierLocation] = useState(null);
     const [routeData, setRouteData] = useState(null);
-
-    const mapRef = useRef(null);
-    const courierMarkerRef = useRef(null);
-    const destinationMarkerRef = useRef(null);
-    const routeLineRef = useRef(null);
     const watchIdRef = useRef(null);
     const selectedOrderRef = useRef(null);
     const syncInFlightRef = useRef(false);
@@ -237,93 +231,6 @@ export default function CourierPage() {
             setSelectedProductIndex(0);
         }
     }, [filteredOrders, selectedOrderId]);
-
-    useEffect(() => {
-        const map = L.map('courier-map-react', { attributionControl: false }).setView([BASE_LOCATION.lat, BASE_LOCATION.lng], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-        const courierIcon = L.divIcon({
-            className: 'courier-marker-wrap',
-            html: '<div class="courier-marker courier-me">&#128757;</div>',
-            iconSize: [48, 48],
-            iconAnchor: [24, 30],
-            popupAnchor: [0, -26],
-        });
-
-        const destinationIcon = L.divIcon({
-            className: 'courier-marker-wrap',
-            html: '<div class="courier-marker courier-destination">&#128205;</div>',
-            iconSize: [44, 44],
-            iconAnchor: [22, 34],
-            popupAnchor: [0, -28],
-        });
-
-        const courierMarker = L.marker([BASE_LOCATION.lat, BASE_LOCATION.lng], { icon: courierIcon }).addTo(map);
-        const destinationMarker = L.marker([BASE_LOCATION.lat, BASE_LOCATION.lng], { icon: destinationIcon }).addTo(map);
-        const routeLine = L.polyline([], {
-            color: '#b47127',
-            weight: 4,
-            opacity: 0.85,
-            dashArray: '8 8',
-        }).addTo(map);
-
-        mapRef.current = map;
-        courierMarkerRef.current = courierMarker;
-        destinationMarkerRef.current = destinationMarker;
-        routeLineRef.current = routeLine;
-
-        return () => {
-            map.remove();
-            mapRef.current = null;
-            courierMarkerRef.current = null;
-            destinationMarkerRef.current = null;
-            routeLineRef.current = null;
-        };
-    }, []);
-
-    useEffect(() => {
-        if (!mapRef.current || !courierMarkerRef.current || !destinationMarkerRef.current || !routeLineRef.current) return;
-
-        const courierPoint = isValidCoords(courierLocation) ? courierLocation : BASE_LOCATION;
-        courierMarkerRef.current.setLatLng([Number(courierPoint.lat), Number(courierPoint.lng)]);
-        courierMarkerRef.current.setPopupContent('<strong>Tu ubicacion actual</strong>');
-
-        if (selectedOrder && selectedDestination) {
-            const destinationPoint = {
-                lat: Number(selectedDestination.lat),
-                lng: Number(selectedDestination.lng),
-            };
-            destinationMarkerRef.current.setLatLng([destinationPoint.lat, destinationPoint.lng]);
-            destinationMarkerRef.current.setPopupContent(`<strong>Destino del pedido</strong><br/>${selectedOrder.id}`);
-
-            const routeCoordinates = activeRouteData?.coordinates?.length
-                ? activeRouteData.coordinates
-                : buildStraightLineRoute(courierPoint, destinationPoint).coordinates;
-
-            routeLineRef.current.setLatLngs(
-                routeCoordinates.map((point) => [Number(point.lat), Number(point.lng)])
-            );
-
-            const bounds = L.latLngBounds(
-                routeCoordinates.map((point) => [Number(point.lat), Number(point.lng)])
-            );
-            mapRef.current.fitBounds(bounds, {
-                padding: [42, 42],
-                maxZoom: 15,
-                animate: true,
-            });
-            return;
-        }
-
-        destinationMarkerRef.current.setLatLng([Number(courierPoint.lat), Number(courierPoint.lng)]);
-        destinationMarkerRef.current.setPopupContent('<strong>Selecciona un pedido</strong>');
-        routeLineRef.current.setLatLngs([]);
-        mapRef.current.flyTo([Number(courierPoint.lat), Number(courierPoint.lng)], Math.max(mapRef.current.getZoom(), 13), {
-            animate: true,
-            duration: 0.8,
-            easeLinearity: 0.25,
-        });
-    }, [activeRouteData, courierLocation, selectedOrder, selectedDestination]);
 
     useEffect(() => {
         if (!selectedDestination) return;
@@ -817,7 +724,7 @@ export default function CourierPage() {
 
                     <article className="card map-card">
                         <h2>Mapa de ruta repartidor - cliente</h2>
-                        <div id="courier-map-react" className="courier-map" aria-label="Mapa de reparto" />
+                        
                         <p className="map-coords">
                             {selectedOrder
                                 ? `Ruta actual: ${routeDistanceLabel}${routeDurationLabel !== '--' ? ` · ETA ${routeDurationLabel}` : ''}`
@@ -841,3 +748,4 @@ export default function CourierPage() {
         </div>
     );
 }
+
