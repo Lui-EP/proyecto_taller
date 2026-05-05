@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import L from 'leaflet';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 import { resolveImageSrc } from '../lib/assets';
@@ -8,10 +7,7 @@ import PageLoader from '../components/PageLoader';
 import SafeImage from '../components/SafeImage';
 
 const CHIAPAS_VIEWBOX = '-94.600000,17.950000,-90.200000,14.450000';
-const CHIAPAS_BOUNDS = [
-    [14.45, -94.6],
-    [17.95, -90.2],
-];
+const DEFAULT_LOCATION = { lat: 16.749, lng: -93.116 };
 const LOCATIONIQ_BASE_URL = 'https://us1.locationiq.com/v1';
 const LOCAL_CHIAPAS_CITY_CENTERS = [
     {
@@ -128,20 +124,15 @@ export default function CheckoutPage() {
     const [googlePlacesReady, setGooglePlacesReady] = useState(false);
     const locationIqApiKey = String(import.meta.env.VITE_LOCATIONIQ_API_KEY || '').trim();
 
-    const checkoutMapContainerRef = useRef(null);
-    const checkoutMapRef = useRef(null);
-    const checkoutMarkerRef = useRef(null);
     const geocodeDebounceRef = useRef(null);
     const geocodeRequestIdRef = useRef(0);
     const manualAddressDebounceRef = useRef(null);
     const manualAddressRequestIdRef = useRef(0);
     const suppressManualGeocodeRef = useRef(false);
-    const pinAnimationTimerRef = useRef(null);
     const googleMapsRef = useRef(null);
     const googleAutocompleteRef = useRef(null);
     const googlePlacesServiceRef = useRef(null);
     const searchAddressLocationRef = useRef(null);
-    const scheduleGeoDetailsUpdateRef = useRef(null);
 
     const extractAddressZones = (address) => {
         const addr = address || {};
@@ -767,26 +758,6 @@ export default function CheckoutPage() {
         };
     };
 
-    const animateCheckoutPin = () => {
-        const markerRoot = checkoutMarkerRef.current?.getElement?.();
-        const pin = markerRoot?.querySelector?.('.checkout-pin');
-        if (!pin) return;
-
-        pin.classList.remove('pin-bounce');
-        if (pinAnimationTimerRef.current) {
-            window.clearTimeout(pinAnimationTimerRef.current);
-            pinAnimationTimerRef.current = null;
-        }
-
-        void pin.offsetWidth;
-        pin.classList.add('pin-bounce');
-
-        pinAnimationTimerRef.current = window.setTimeout(() => {
-            pin.classList.remove('pin-bounce');
-            pinAnimationTimerRef.current = null;
-        }, 420);
-    };
-
     const formatAddressFromGeo = (mainAddress, colony, subdivision) => {
         const lines = [];
         const safeMain = String(mainAddress || '').trim();
@@ -843,28 +814,7 @@ export default function CheckoutPage() {
         }
     };
 
-    const scheduleGeoDetailsUpdate = (coords) => {
-        setAddressSuggestions([]);
-        setShowAddressSuggestions(false);
-        setSuggestionsSource('');
-        if (geocodeDebounceRef.current) {
-            window.clearTimeout(geocodeDebounceRef.current);
-            geocodeDebounceRef.current = null;
-        }
-
-        const requestId = geocodeRequestIdRef.current + 1;
-        geocodeRequestIdRef.current = requestId;
-        setLocationStatus('requesting');
-
-        geocodeDebounceRef.current = window.setTimeout(async () => {
-            const success = await applyGeoDetailsToAddress(coords, false);
-            if (geocodeRequestIdRef.current !== requestId) return;
-            setLocationStatus(success ? 'granted' : 'error');
-        }, 420);
-    };
-
     searchAddressLocationRef.current = searchAddressLocation;
-    scheduleGeoDetailsUpdateRef.current = scheduleGeoDetailsUpdate;
 
     const applyAddressSuggestion = async (suggestion) => {
         let resolved = suggestion;
@@ -908,7 +858,6 @@ export default function CheckoutPage() {
         setShowAddressSuggestions(false);
         setSuggestionsSource('');
         setLocationStatus('granted');
-        animateCheckoutPin();
         mercado.showToast('Sugerencia aplicada');
     };
 
@@ -1069,73 +1018,6 @@ export default function CheckoutPage() {
         }, 700);
     }, [customer.address, googlePlacesReady, deliveryMethod]);
 
-    useEffect(() => {
-        if (deliveryMethod !== 'delivery') return;
-        if (!customerLocation || !checkoutMapContainerRef.current) return;
-
-        const lat = Number(customerLocation.lat);
-        const lng = Number(customerLocation.lng);
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-
-        if (!checkoutMapRef.current) {
-            const map = L.map(checkoutMapContainerRef.current, {
-                attributionControl: false,
-                maxBounds: CHIAPAS_BOUNDS,
-                maxBoundsViscosity: 0.9,
-            }).setView([lat, lng], 15);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            map.setMaxBounds(CHIAPAS_BOUNDS);
-
-            const icon = L.divIcon({
-                className: 'courier-marker-wrap',
-                html: '<div class="courier-marker checkout-pin">&#128205;</div>',
-                iconSize: [52, 52],
-                iconAnchor: [26, 40],
-                popupAnchor: [0, -30],
-            });
-
-            const marker = L.marker([lat, lng], { icon }).addTo(map);
-
-            map.on('click', (event) => {
-                const nextPoint = event.latlng;
-                const nextCoords = {
-                    lat: Number(nextPoint.lat.toFixed(6)),
-                    lng: Number(nextPoint.lng.toFixed(6)),
-                };
-
-                marker.setLatLng([nextCoords.lat, nextCoords.lng]);
-                setCustomerLocation(nextCoords);
-                scheduleGeoDetailsUpdateRef.current?.(nextCoords);
-                animateCheckoutPin();
-            });
-
-            checkoutMapRef.current = map;
-            checkoutMarkerRef.current = marker;
-
-            window.setTimeout(() => {
-                map.invalidateSize();
-            }, 120);
-        } else {
-            checkoutMarkerRef.current?.setLatLng([lat, lng]);
-            animateCheckoutPin();
-            checkoutMapRef.current.flyTo([lat, lng], Math.max(checkoutMapRef.current.getZoom(), 15), {
-                animate: true,
-                duration: 1,
-                easeLinearity: 0.25,
-            });
-        }
-    }, [customerLocation, deliveryMethod]);
-
-
-    useEffect(() => {
-        if (deliveryMethod === 'delivery') return;
-        if (checkoutMapRef.current) {
-            checkoutMapRef.current.remove();
-            checkoutMapRef.current = null;
-            checkoutMarkerRef.current = null;
-        }
-    }, [deliveryMethod]);
     useEffect(() => () => {
         if (geocodeDebounceRef.current) {
             window.clearTimeout(geocodeDebounceRef.current);
@@ -1144,16 +1026,6 @@ export default function CheckoutPage() {
         if (manualAddressDebounceRef.current) {
             window.clearTimeout(manualAddressDebounceRef.current);
             manualAddressDebounceRef.current = null;
-        }
-        if (pinAnimationTimerRef.current) {
-            window.clearTimeout(pinAnimationTimerRef.current);
-            pinAnimationTimerRef.current = null;
-        }
-
-        if (checkoutMapRef.current) {
-            checkoutMapRef.current.remove();
-            checkoutMapRef.current = null;
-            checkoutMarkerRef.current = null;
         }
     }, []);
 
@@ -1231,6 +1103,18 @@ export default function CheckoutPage() {
         () => checkoutItems.reduce((sum, item) => sum + Number(item.subtotal || 0), 0),
         [checkoutItems]
     );
+    const checkoutGoogleEmbedUrl = useMemo(() => {
+        if (deliveryMethod !== 'delivery') return '';
+        if (customerLocation && Number.isFinite(Number(customerLocation.lat)) && Number.isFinite(Number(customerLocation.lng))) {
+            return `https://www.google.com/maps?q=${encodeURIComponent(`${Number(customerLocation.lat)},${Number(customerLocation.lng)}`)}&z=17&output=embed`;
+        }
+        const rawAddress = String(customer.address || '').trim();
+        const address = rawAddress || detectedAddress;
+        if (address) {
+            return `https://www.google.com/maps?q=${encodeURIComponent(address)}&z=16&output=embed`;
+        }
+        return `https://www.google.com/maps?q=${DEFAULT_LOCATION.lat},${DEFAULT_LOCATION.lng}&z=13&output=embed`;
+    }, [customer.address, customerLocation, deliveryMethod, detectedAddress]);
 
     const requestCustomerLocation = () => {
         if (!navigator.geolocation) {
@@ -1326,13 +1210,22 @@ export default function CheckoutPage() {
             const finalAddress = isPickup
                 ? `${pickupAddress}${cleanAddress ? ` | Nota cliente: ${cleanAddress}` : ''}`
                 : cleanAddress;
+            const finalDeliveryLocation = !isPickup && customerLocation
+                ? { lat: Number(customerLocation.lat), lng: Number(customerLocation.lng) }
+                : undefined;
+            const finalAddressLabel = !isPickup
+                ? String(customer.address || detectedAddress || '').trim()
+                : '';
 
             const order = await mercado.OrdersAPI.create({
                 customer: {
                     ...customer,
                     address: finalAddress,
                 },
-                location: !isPickup && customerLocation ? { ...customerLocation } : undefined,
+                delivery_location: finalDeliveryLocation,
+                address_label: finalAddressLabel,
+                address_colony: detectedColony || '',
+                address_subdivision: detectedSubdivision || '',
                 delivery_method: isPickup ? 'pickup' : 'delivery',
                 pickup_point: isPickup && selectedPickupPoint ? { ...selectedPickupPoint } : undefined,
                 items: activeItems.map((item) => ({
@@ -1563,15 +1456,17 @@ export default function CheckoutPage() {
                                     </div>
                                 ) : null}
 
-                                {customerLocation ? (
+                                {deliveryMethod === 'delivery' && (customerLocation || customer.address || detectedAddress) ? (
                                     <div className="checkout-map-preview" aria-label="Vista previa del mapa de entrega">
-                                        <p className="checkout-map-title">Vista previa de ubicacion</p>
-                                        <div
-                                            ref={checkoutMapContainerRef}
+                                        <p className="checkout-map-title">Vista previa en Google Maps</p>
+                                        <iframe
+                                            title="Vista previa Google Maps entrega"
+                                            src={checkoutGoogleEmbedUrl}
                                             className="checkout-map-frame courier-map"
-                                            aria-label="Mapa de entrega"
+                                            loading="lazy"
+                                            referrerPolicy="no-referrer-when-downgrade"
                                         />
-                                        <p className="checkout-map-helper">Haz clic en el mapa para mover el pin. Si escribes una direccion, el pin tambien se actualiza automaticamente.</p>
+                                        <p className="checkout-map-helper">La vista se actualiza con la direccion y ubicacion detectadas para el pedido.</p>
                                     </div>
                                 ) : null}
                             </>
