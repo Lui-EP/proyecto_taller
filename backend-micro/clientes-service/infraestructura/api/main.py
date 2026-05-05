@@ -370,7 +370,7 @@ def serialize_producto(producto: Producto, db: Session) -> dict:
         'price': producto.precio,
         'stock': producto.stock,
         'description': producto.descripcion,
-        'status': producto.status or 'approved',
+        'status': getattr(producto, 'status', None) or 'approved',
         'featured': producto.featured,
         'local': producto.local,
         'verified': producto.verified,
@@ -1215,6 +1215,11 @@ def admin_status_producto(
     safe_status = str(status_value or '').strip().lower()
     if safe_status not in allowed_statuses:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Estado de producto invalido')
+    if not hasattr(product, 'status'):
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Este backend no tiene campo status en productos. Actualiza clientes-service con el modelo mas reciente.',
+        )
     product.status = safe_status
     product.updated_at = datetime.utcnow()
     db.commit()
