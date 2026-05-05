@@ -743,9 +743,10 @@ export default function AdminPage() {
                                     product.images?.[0],
                                     mercado.createPlaceholderImage(product.name || 'Producto')
                                 );
+                                const isPaused = String(product.status || '').toLowerCase() === 'paused';
 
                                 return (
-                                    <article className="adminx-product-card card" key={product.id}>
+                                    <article className={`adminx-product-card card ${isPaused ? 'is-paused' : ''}`} key={product.id}>
                                         <div className="adminx-product-top">
                                             <div className="adminx-product-image">
                                                 <SafeImage
