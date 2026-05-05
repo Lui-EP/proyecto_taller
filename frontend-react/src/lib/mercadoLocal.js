@@ -189,7 +189,7 @@ function normalizeRemoteProduct(mercado, remoteProduct = {}) {
         price: toSafeNumber(remoteProduct.price, 0),
         images: image ? [image] : [mercado.createPlaceholderImage(remoteProduct.name || 'Producto')],
         stock: toSafeNumber(remoteProduct.stock, 0),
-        status: 'approved',
+        status: normalizeText(remoteProduct.status, 'approved').toLowerCase(),
         is_featured: Boolean(remoteProduct.featured),
         is_local_handmade: Boolean(remoteProduct.local),
         local_handmade_verified: Boolean(remoteProduct.verified),

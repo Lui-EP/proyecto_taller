@@ -370,6 +370,7 @@ def serialize_producto(producto: Producto, db: Session) -> dict:
         'price': producto.precio,
         'stock': producto.stock,
         'description': producto.descripcion,
+        'status': producto.status or 'approved',
         'featured': producto.featured,
         'local': producto.local,
         'verified': producto.verified,
@@ -1210,9 +1211,14 @@ def admin_status_producto(
     product = db.get(Producto, product_id)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
+    allowed_statuses = {'pending', 'approved', 'paused', 'rejected'}
+    safe_status = str(status_value or '').strip().lower()
+    if safe_status not in allowed_statuses:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Estado de producto invalido')
+    product.status = safe_status
     product.updated_at = datetime.utcnow()
     db.commit()
-    return {'status': 'ok', 'product_id': product_id, 'new_status': status_value}
+    return {'status': 'ok', 'product_id': product_id, 'new_status': product.status}
 
 
 @app.put('/admin/products/{product_id}/verify-local')

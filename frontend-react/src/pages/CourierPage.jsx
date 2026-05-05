@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 import { buildStraightLineRoute, fetchLocationIqRoute, isValidCoords } from '../lib/locationIqRouting';
 
@@ -127,6 +128,7 @@ function sortOrdersByPriority(orders, courierLocation, currentUserId) {
 
 export default function CourierPage() {
     const mercado = getMercadoLocal();
+    const navigate = useNavigate();
     const currentUserId = String(mercado.AppState?.user?.id || '');
 
     const [orders, setOrders] = useState([]);
@@ -509,7 +511,7 @@ export default function CourierPage() {
         if (!selectedOrder) return;
         const params = new URLSearchParams({ id: selectedOrder.id });
         if (selectedOrder.tracking_token) params.set('token', selectedOrder.tracking_token);
-        window.open(`/seguimiento-cliente?${params.toString()}`, '_blank', 'noopener,noreferrer');
+        navigate(`/seguimiento-cliente?${params.toString()}`);
     };
 
     const openRouteToCustomer = () => {
