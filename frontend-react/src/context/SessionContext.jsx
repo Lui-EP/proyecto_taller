@@ -1,4 +1,4 @@
-﻿/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { ensureLegacySession, getMercadoLocal, snapshotState, getCartCount } from '../lib/mercadoLocal';
 
@@ -50,6 +50,7 @@ export function SessionProvider({ children }) {
         const result = await mercado.AuthAPI.login(email, password);
         mercado.AppState.token = result.token;
         mercado.AppState.user = result.user;
+        if (typeof window !== 'undefined') window.localStorage.setItem('ml_token', result.token);
         if (typeof mercado.syncCartAfterAuth === 'function') {
             mercado.syncCartAfterAuth(result.user);
         }
@@ -73,6 +74,7 @@ export function SessionProvider({ children }) {
 
         mercado.AppState.token = result.token;
         mercado.AppState.user = result.user;
+        if (typeof window !== 'undefined') window.localStorage.setItem('ml_token', result.token);
         if (typeof mercado.syncCartAfterAuth === 'function') {
             mercado.syncCartAfterAuth(result.user);
         }
@@ -84,6 +86,7 @@ export function SessionProvider({ children }) {
         const mercado = getMercadoLocal();
         mercado.AppState.token = null;
         mercado.AppState.user = null;
+        if (typeof window !== 'undefined') window.localStorage.removeItem('ml_token');
         if (typeof mercado.syncCartStateForUser === 'function') {
             mercado.syncCartStateForUser(null);
         }

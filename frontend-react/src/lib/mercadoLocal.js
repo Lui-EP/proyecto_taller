@@ -252,7 +252,7 @@ function createMercadoLocal() {
         API_URL: CLIENTES_API_URL,
         AppState: {
             user: null,
-            token: null,
+            token: typeof window !== 'undefined' ? (window.localStorage.getItem('ml_token') || null) : null,
             favorites: [],
             cart: [],
             viewHistory: [],
