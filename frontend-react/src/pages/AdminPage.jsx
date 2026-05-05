@@ -52,6 +52,18 @@ const ORDER_FILTERS = [
     { value: 'cancelado_no_show', label: 'Cancelado no show' },
 ];
 
+function inferCategoryMetaphor(name = '') {
+    const normalized = String(name || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    if (['alimento', 'comida', 'cafe', 'miel', 'bebida'].some((token) => normalized.includes(token))) return '🍯';
+    if (['textil', 'ropa', 'rebozo', 'tejido'].some((token) => normalized.includes(token))) return '🧵';
+    if (['joyeria', 'ambar', 'pulsera', 'anillo'].some((token) => normalized.includes(token))) return '💍';
+    if (['arte', 'artesania', 'barro', 'canasta', 'madera'].some((token) => normalized.includes(token))) return '🎨';
+    return '📦';
+}
+
 function isActiveStatus(status) {
     const safe = String(status || '').toLowerCase();
     return ['verified', 'active', 'approved'].includes(safe);
@@ -305,7 +317,7 @@ export default function AdminPage() {
 
     const [sellerSearch, setSellerSearch] = useState('');
     const [courierSearch, setCourierSearch] = useState('');
-    const [categoryForm, setCategoryForm] = useState({ name: '', description: '' });
+    const [categoryForm, setCategoryForm] = useState({ name: '', description: '', metafora: '' });
 
     const canAccess = session.user?.role === 'admin';
 
@@ -517,8 +529,9 @@ export default function AdminPage() {
             await mercado.CategoriesAPI.create({
                 name,
                 description: categoryForm.description.trim(),
+                metafora: categoryForm.metafora.trim(),
             });
-            setCategoryForm({ name: '', description: '' });
+            setCategoryForm({ name: '', description: '', metafora: '' });
             mercado.showToast('Categoria creada');
             await loadCategories();
         } catch {
@@ -874,6 +887,26 @@ export default function AdminPage() {
                                         onChange={(event) => setCategoryForm((prev) => ({ ...prev, description: event.target.value }))}
                                     />
                                 </div>
+                                <div className="form-group">
+                                    <label className="form-label" htmlFor="category-metafora">Metafora (emoji)</label>
+                                    <div style={{ display: 'flex', gap: '0.45rem' }}>
+                                        <input
+                                            id="category-metafora"
+                                            className="form-input"
+                                            placeholder="Ejemplo: 🎨"
+                                            value={categoryForm.metafora}
+                                            onChange={(event) => setCategoryForm((prev) => ({ ...prev, metafora: event.target.value }))}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="btn btn-secondary btn-sm"
+                                            onClick={() => setCategoryForm((prev) => ({ ...prev, metafora: inferCategoryMetaphor(prev.name) }))}
+                                            title="Asignar automáticamente por nombre"
+                                        >
+                                            Auto
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                             <div className="adminx-actions">
                                 <button className="btn btn-primary" type="submit">Crear categoria</button>
@@ -884,7 +917,7 @@ export default function AdminPage() {
                             {filteredCategories.length ? filteredCategories.map((category) => (
                                 <article className="adminx-simple-row card" key={category.id}>
                                     <div>
-                                        <h3>{category.name || 'Categoria'}</h3>
+                                        <h3>{category.metafora ? `${category.metafora} ${category.name || 'Categoria'}` : (category.name || 'Categoria')}</h3>
                                         <p className="adminx-subtext">{category.description || 'Sin descripcion'}</p>
                                     </div>
                                     <div className="adminx-actions adminx-actions--inline">

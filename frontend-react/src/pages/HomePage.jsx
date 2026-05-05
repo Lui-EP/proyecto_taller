@@ -31,6 +31,12 @@ function getCategoryIcon(name) {
     return CATEGORY_ICONS[normalized] || CATEGORY_ICONS.default;
 }
 
+function resolveCategoryIcon(category = {}) {
+    const custom = String(category?.metafora || '').trim();
+    if (custom) return custom;
+    return getCategoryIcon(category?.name || '');
+}
+
 function buildHeroShowcaseProducts(featured, all, maxItems = 12) {
     const list = [];
     const used = new Set();
@@ -255,7 +261,7 @@ export default function HomePage() {
         categories.slice(0, 10).map((category) => ({
             id: category.id,
             name: category.name,
-            icon: getCategoryIcon(category.name),
+            icon: resolveCategoryIcon(category),
             href: `/catalogo?category=${encodeURIComponent(category.id)}`,
         }))
     ), [categories]);
@@ -467,7 +473,7 @@ export default function HomePage() {
                                 to={`/catalogo?category=${encodeURIComponent(category.id)}`}
                                 className="category-card"
                             >
-                                <div className="category-icon">{getCategoryIcon(category.name)}</div>
+                                <div className="category-icon">{resolveCategoryIcon(category)}</div>
                                 <span className="category-name">{category.name}</span>
                             </Link>
                         )) : <p className="text-center text-muted grid-full">No hay categorias disponibles</p>}

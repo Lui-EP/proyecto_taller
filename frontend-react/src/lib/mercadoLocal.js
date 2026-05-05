@@ -537,13 +537,23 @@ function createMercadoLocal() {
         const isAdmin = mercado.AppState?.user?.role === 'admin';
         return categories
             .filter((item) => isAdmin || item.status === 'approved')
-            .map((item) => ({ id: item.id, name: item.name, status: item.status || 'approved' }));
+            .map((item) => ({
+                id: item.id,
+                name: item.name,
+                description: item.description || '',
+                metafora: item.metafora || '',
+                status: item.status || 'approved',
+            }));
     };
 
     mercado.CategoriesAPI.create = async (data) => {
         const payload = await fetchJson(CLIENTES_API_URL, '/categorias', {
             method: 'POST',
-            body: JSON.stringify({ name: normalizeText(data?.name, 'Categoria'), description: normalizeText(data?.description, '') }),
+            body: JSON.stringify({
+                name: normalizeText(data?.name, 'Categoria'),
+                description: normalizeText(data?.description, ''),
+                metafora: normalizeText(data?.metafora, ''),
+            }),
         });
         return payload?.category || null;
     };

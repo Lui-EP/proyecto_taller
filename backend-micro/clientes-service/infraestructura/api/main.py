@@ -104,6 +104,7 @@ class ProductoUpdate(BaseModel):
 class CategoriaIn(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     description: str | None = Field(default='', max_length=500)
+    metafora: str | None = Field(default='', max_length=16)
 
 
 class ReviewIn(BaseModel):
@@ -294,6 +295,19 @@ def slugify_category(value: str) -> str:
         safe = safe.replace('--', '-')
     safe = safe.strip('-')
     return safe or f'categoria-{uuid4().hex[:6]}'
+
+
+def infer_metafora_categoria(name: str) -> str:
+    normalized = ''.join(ch.lower() for ch in str(name or '') if ch.isalnum() or ch.isspace())
+    if any(token in normalized for token in ['alimento', 'comida', 'cafe', 'miel', 'bebida']):
+        return '🍯'
+    if any(token in normalized for token in ['textil', 'ropa', 'rebozo', 'tejido']):
+        return '🧵'
+    if any(token in normalized for token in ['joyeria', 'joyeria', 'ambar', 'pulsera', 'anillo']):
+        return '💍'
+    if any(token in normalized for token in ['arte', 'artesania', 'barro', 'canasta', 'madera']):
+        return '🎨'
+    return '📦'
 
 
 def serialize_usuario(usuario: UsuarioApp, include_password: bool = False) -> dict:
@@ -573,6 +587,7 @@ def listar_categorias(db: Session = Depends(get_session)):
                 'id': item.categoria_id,
                 'name': item.nombre,
                 'description': item.descripcion or '',
+                'metafora': item.metafora or infer_metafora_categoria(item.nombre),
                 'status': item.status,
                 'created_at': item.created_at.isoformat() if item.created_at else '',
             }
@@ -591,6 +606,7 @@ def crear_categoria(payload: CategoriaIn, db: Session = Depends(get_session)):
         categoria_id=category_id,
         nombre=payload.name.strip(),
         descripcion=(payload.description or '').strip(),
+        metafora=(payload.metafora or '').strip() or infer_metafora_categoria(payload.name),
         status='pending',
         created_at=datetime.utcnow(),
     )
@@ -603,6 +619,7 @@ def crear_categoria(payload: CategoriaIn, db: Session = Depends(get_session)):
             'id': category.categoria_id,
             'name': category.nombre,
             'description': category.descripcion or '',
+            'metafora': category.metafora or infer_metafora_categoria(category.nombre),
             'status': category.status,
             'created_at': category.created_at.isoformat() if category.created_at else '',
         },

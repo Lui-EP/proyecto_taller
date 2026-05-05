@@ -322,6 +322,7 @@ class Categoria(Base):
     categoria_id = Column(String(60), primary_key=True)
     nombre = Column(String(120), nullable=False)
     descripcion = Column(Text, nullable=True)
+    metafora = Column(String(16), nullable=True, default='📦')
     status = Column(String(40), nullable=False, default='approved')
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -430,10 +431,10 @@ def seed_categorias() -> None:
             return
         now = datetime.utcnow()
         categories = [
-            Categoria(categoria_id='artesanias', nombre='Artesanias', descripcion='Productos artesanales', status='approved', created_at=now),
-            Categoria(categoria_id='alimentos', nombre='Alimentos', descripcion='Comida local', status='approved', created_at=now),
-            Categoria(categoria_id='textiles', nombre='Textiles', descripcion='Ropa y tejidos', status='approved', created_at=now),
-            Categoria(categoria_id='joyeria', nombre='Joyeria', descripcion='Accesorios y joyeria', status='approved', created_at=now),
+            Categoria(categoria_id='artesanias', nombre='Artesanias', descripcion='Productos artesanales', metafora='🎨', status='approved', created_at=now),
+            Categoria(categoria_id='alimentos', nombre='Alimentos', descripcion='Comida local', metafora='🍯', status='approved', created_at=now),
+            Categoria(categoria_id='textiles', nombre='Textiles', descripcion='Ropa y tejidos', metafora='🧵', status='approved', created_at=now),
+            Categoria(categoria_id='joyeria', nombre='Joyeria', descripcion='Accesorios y joyeria', metafora='💍', status='approved', created_at=now),
         ]
         for category in categories:
             db.add(category)
@@ -474,6 +475,8 @@ def init_db(retries: int = 20, delay_seconds: int = 2) -> None:
             with engine.begin() as conn:
                 conn.execute(text("ALTER TABLE productos ADD COLUMN IF NOT EXISTS status VARCHAR(40)"))
                 conn.execute(text("UPDATE productos SET status = 'approved' WHERE status IS NULL OR TRIM(status) = ''"))
+                conn.execute(text("ALTER TABLE categorias ADD COLUMN IF NOT EXISTS metafora VARCHAR(16)"))
+                conn.execute(text("UPDATE categorias SET metafora = '📦' WHERE metafora IS NULL OR TRIM(metafora) = ''"))
             seed_productos()
             seed_usuarios_app()
             seed_categorias()
