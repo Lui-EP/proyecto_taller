@@ -222,7 +222,7 @@ function ActiveList({ title, items, type }) {
     );
 }
 
-function UserCard({ user, type, mercado, onStatusChange }) {
+function UserCard({ user, type, mercado, onStatusChange, onDelete }) {
     const isCourier = type === 'courier';
     const status = String(user.status || '').toLowerCase();
 
@@ -246,6 +246,9 @@ function UserCard({ user, type, mercado, onStatusChange }) {
                     </button>
                     <button className="btn btn-outline btn-sm adminx-btn-danger" type="button" disabled={status === 'blocked'} onClick={() => onStatusChange(user.id, 'blocked')}>
                         Bloquear
+                    </button>
+                    <button className="btn btn-secondary btn-sm" type="button" onClick={() => onDelete(user)}>
+                        Eliminar
                     </button>
                 </div>
             </div>
@@ -422,6 +425,19 @@ export default function AdminPage() {
         }
     };
 
+    const deleteUser = async (user, label) => {
+        const userName = user?.seller_profile?.business_name || user?.name || user?.email || 'usuario';
+        const accepted = window.confirm(`¿Eliminar ${label} "${userName}" de forma definitiva?`);
+        if (!accepted) return;
+        try {
+            await mercado.AdminAPI.deleteUser(user.id);
+            mercado.showToast(`${label} eliminado`);
+            await refreshCore();
+        } catch (error) {
+            mercado.showToast(error.message || `No se pudo eliminar ${label}`, 'error');
+        }
+    };
+
     const updateProductStatus = async (id, status) => {
         try {
             await mercado.AdminAPI.updateProductStatus(id, status);
@@ -429,6 +445,18 @@ export default function AdminPage() {
             await Promise.all([loadProducts(productFilter), loadStats()]);
         } catch {
             mercado.showToast('No se pudo actualizar el producto', 'error');
+        }
+    };
+
+    const deleteProduct = async (id, name = 'producto') => {
+        const accepted = window.confirm(`¿Eliminar ${name} de forma definitiva?`);
+        if (!accepted) return;
+        try {
+            await mercado.AdminAPI.deleteProduct(id);
+            mercado.showToast('Producto eliminado');
+            await Promise.all([loadProducts(productFilter), loadStats()]);
+        } catch (error) {
+            mercado.showToast(error.message || 'No se pudo eliminar el producto', 'error');
         }
     };
 
@@ -768,6 +796,9 @@ export default function AdminPage() {
                                             <button className="btn btn-primary btn-sm" type="button" onClick={() => featureProduct(product.id)}>
                                                 Destacar
                                             </button>
+                                            <button className="btn btn-outline btn-sm adminx-btn-danger" type="button" onClick={() => deleteProduct(product.id, product.name || 'producto')}>
+                                                Eliminar
+                                            </button>
                                         </div>
                                     </article>
                                 );
@@ -888,6 +919,7 @@ export default function AdminPage() {
                                     type="seller"
                                     mercado={mercado}
                                     onStatusChange={(id, status) => updateUserStatus(id, status, 'vendedor')}
+                                    onDelete={(user) => deleteUser(user, 'vendedor')}
                                 />
                             )) : <p className="adminx-empty">No hay vendedores que coincidan con el filtro.</p>}
                         </div>
@@ -923,6 +955,7 @@ export default function AdminPage() {
                                     type="courier"
                                     mercado={mercado}
                                     onStatusChange={(id, status) => updateUserStatus(id, status, 'repartidor')}
+                                    onDelete={(user) => deleteUser(user, 'repartidor')}
                                 />
                             )) : <p className="adminx-empty">No hay repartidores que coincidan con el filtro.</p>}
                         </div>

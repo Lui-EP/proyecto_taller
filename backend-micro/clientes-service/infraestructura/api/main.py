@@ -1237,6 +1237,25 @@ def admin_status_producto(
     return {'status': 'ok', 'product_id': product_id, 'new_status': product.status}
 
 
+@app.delete('/admin/products/{product_id}')
+def admin_delete_product(
+    product_id: str,
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
+    product = db.get(Producto, product_id)
+    if not product:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Producto no encontrado')
+
+    db.query(CarritoItem).filter(CarritoItem.product_id == product_id).delete(synchronize_session=False)
+    db.query(Favorito).filter(Favorito.product_id == product_id).delete(synchronize_session=False)
+    db.query(Resena).filter(Resena.product_id == product_id).delete(synchronize_session=False)
+    db.query(Reporte).filter(Reporte.target_type == 'product', Reporte.target_id == product_id).delete(synchronize_session=False)
+    db.delete(product)
+    db.commit()
+    return {'status': 'ok', 'deleted': True, 'product_id': product_id}
+
+
 @app.put('/admin/products/{product_id}/verify-local')
 def admin_verify_local(
     product_id: str,
@@ -1297,6 +1316,35 @@ def admin_status_user(
     user.activo = status_value != 'blocked'
     db.commit()
     return {'status': 'ok', 'user_id': user_id, 'new_status': status_value}
+
+
+@app.delete('/admin/users/{user_id}')
+def admin_delete_user(
+    user_id: str,
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
+    user = db.get(UsuarioApp, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Usuario no encontrado')
+    if user.role == 'admin':
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No se puede eliminar un administrador')
+
+    # Remove seller-related data if applicable.
+    if user.role == 'seller':
+        db.query(Producto).filter(Producto.seller_id == user_id).delete(synchronize_session=False)
+        db.query(SellerProfile).filter(SellerProfile.seller_id == user_id).delete(synchronize_session=False)
+
+    # Remove generic user-linked data.
+    db.query(CarritoItem).filter(CarritoItem.owner_id == user_id).delete(synchronize_session=False)
+    db.query(Favorito).filter(Favorito.user_id == user_id).delete(synchronize_session=False)
+    db.query(Resena).filter(Resena.user_id == user_id).delete(synchronize_session=False)
+    db.query(Reporte).filter(Reporte.reporter_id == user_id).delete(synchronize_session=False)
+    db.query(Reporte).filter(Reporte.target_type == 'user', Reporte.target_id == user_id).delete(synchronize_session=False)
+
+    db.delete(user)
+    db.commit()
+    return {'status': 'ok', 'deleted': True, 'user_id': user_id}
 
 
 @app.get('/admin/stats')
