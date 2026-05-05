@@ -209,17 +209,23 @@ export default function CatalogPage() {
         SORT_OPTIONS.find((option) => option.value === filters.sort_by) || SORT_OPTIONS[0]
     ), [filters.sort_by]);
 
+    const categoriesWithUncategorized = useMemo(() => {
+        const exists = categories.some((category) => String(category?.id || '').trim() === 'sin-categoria');
+        if (exists) return categories;
+        return [...categories, { id: 'sin-categoria', name: 'Sin categoría' }];
+    }, [categories]);
+
     const mobileCategoryChips = useMemo(() => {
         const list = [{ id: '', name: 'Todos' }];
-        for (const category of categories.slice(0, 10)) {
+        for (const category of categoriesWithUncategorized.slice(0, 10)) {
             list.push({ id: category.id, name: category.name });
         }
         return list;
-    }, [categories]);
+    }, [categoriesWithUncategorized]);
 
     const activeFilters = useMemo(() => {
         const list = [];
-        const categoryName = categories.find((category) => category.id === filters.category_id)?.name;
+        const categoryName = categoriesWithUncategorized.find((category) => category.id === filters.category_id)?.name;
 
         if (filters.search) list.push({ key: 'search', label: `Búsqueda: ${filters.search}` });
         if (filters.category_id) list.push({ key: 'category_id', label: `Categoría: ${categoryName || filters.category_id}` });
@@ -236,7 +242,7 @@ export default function CatalogPage() {
         if (filters.seller_verified) list.push({ key: 'seller_verified', label: 'Vendedor verificado' });
 
         return list;
-    }, [filters, categories, mercado]);
+    }, [filters, categoriesWithUncategorized, mercado]);
 
     const totalPages = Math.max(1, Math.ceil(total / filters.limit));
     const currentPage = Math.floor(filters.skip / filters.limit) + 1;
@@ -385,7 +391,7 @@ export default function CatalogPage() {
                                     onChange={(event) => setFilters((prev) => ({ ...prev, category_id: event.target.value, skip: 0 }))}
                                 >
                                     <option value="">Todas las categorías</option>
-                                    {categories.map((category) => (
+                                    {categoriesWithUncategorized.map((category) => (
                                         <option key={category.id} value={category.id}>{category.name}</option>
                                     ))}
                                 </select>
