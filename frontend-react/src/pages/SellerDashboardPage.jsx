@@ -280,11 +280,15 @@ export default function SellerDashboardPage() {
         if (!days) return;
 
         try {
-            await mercado.apiRequest(`/products/${productId}/feature?days=${encodeURIComponent(days)}`, { method: 'POST' });
-            mercado.showToast(`Producto destacado por ${days} dias`);
-            await loadData();
+            await mercado.ReportsAPI.create({
+                target_type: 'product',
+                target_id: productId,
+                reason: 'feature_request',
+                description: `Solicitud para destacar producto por ${days} dias`
+            });
+            mercado.showToast('Solicitud enviada al administrador');
         } catch (error) {
-            mercado.showToast(error.message || 'Error al destacar producto', 'error');
+            mercado.showToast(error.message || 'Error al enviar solicitud', 'error');
         }
     };
 

@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
@@ -89,6 +89,7 @@ function toReasonText(reason) {
     if (safe === 'spam') return 'Spam';
     if (safe === 'fake') return 'Informacion falsa';
     if (safe === 'offensive') return 'Contenido ofensivo';
+    if (safe === 'feature_request') return 'Solicitud para destacar';
     if (safe === 'other') return 'Otro';
     return reason;
 }
