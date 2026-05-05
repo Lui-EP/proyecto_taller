@@ -7,6 +7,7 @@ const STATUS_LABELS = {
     en_transito: 'En transito',
     entregado: 'Entregado',
 };
+const ACTIVE_COURIER_STATUSES = new Set(['pedido_realizado', 'asignado', 'en_transito', 'listo_recoger']);
 
 const BASE_LOCATION = { lat: 16.749, lng: -93.116 };
 
@@ -82,7 +83,8 @@ function sortOrdersByPriority(orders, courierLocation, currentUserId) {
             const distanceKm = courierLocation && destination ? distanceInKm(courierLocation, destination) : null;
             const status = normalizeStatus(order.status);
             const isMine = Boolean(order.courier_id && order.courier_id === currentUserId);
-            const isAvailable = !order.courier_id;
+            const isAvailable = !order.courier_id && ACTIVE_COURIER_STATUSES.has(status);
+            const isActive = ACTIVE_COURIER_STATUSES.has(status);
             return {
                 ...order,
                 _meta: {
@@ -90,6 +92,7 @@ function sortOrdersByPriority(orders, courierLocation, currentUserId) {
                     status,
                     isMine,
                     isAvailable,
+                    isActive,
                 },
             };
         })
@@ -144,13 +147,14 @@ export default function CourierPage() {
         [orders, courierLocation, currentUserId]
     );
     const filteredOrders = useMemo(() => {
+        const activeOnly = sortedOrders.filter((order) => order._meta?.isActive);
         if (ordersFilter === 'available') {
-            return sortedOrders.filter((order) => order._meta?.isAvailable);
+            return activeOnly.filter((order) => order._meta?.isAvailable);
         }
         if (ordersFilter === 'mine') {
-            return sortedOrders.filter((order) => order._meta?.isMine);
+            return activeOnly.filter((order) => order._meta?.isMine);
         }
-        return sortedOrders;
+        return activeOnly;
     }, [ordersFilter, sortedOrders]);
     const selectedOrder = useMemo(
         () => filteredOrders.find((item) => item.id === selectedOrderId) || null,
