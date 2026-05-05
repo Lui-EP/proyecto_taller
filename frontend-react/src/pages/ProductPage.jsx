@@ -16,6 +16,7 @@ const REVIEWS_PAGE_SIZE = 8;
 export default function ProductPage() {
     const [searchParams] = useSearchParams();
     const productId = searchParams.get('id') || '';
+    const targetReviewParam = searchParams.get('review') || '';
     const mercado = useMemo(() => getMercadoLocal(), []);
     const session = useSession();
     const navigate = useNavigate();
@@ -29,6 +30,7 @@ export default function ProductPage() {
     const [review, setReview] = useState({ rating: 0, comment: '' });
     const [report, setReport] = useState({ reason: 'fake', description: '' });
     const [visibleReviewsCount, setVisibleReviewsCount] = useState(REVIEWS_PAGE_SIZE);
+    const [highlightedReviewId, setHighlightedReviewId] = useState('');
 
     const images = useMemo(() => {
         if (!product) return [];
@@ -37,6 +39,11 @@ export default function ProductPage() {
     }, [product, mercado]);
 
     const isFav = useMemo(() => session.favorites.includes(product?.id), [session.favorites, product?.id]);
+
+    const normalizeReviewId = (value) => {
+        const raw = String(value || '').trim().toLowerCase();
+        return raw.startsWith('r-') ? raw : (raw ? `r-${raw}` : '');
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -70,6 +77,29 @@ export default function ProductPage() {
             cancelled = true;
         };
     }, [productId, mercado, session.syncState]);
+
+    useEffect(() => {
+        if (!product || !targetReviewParam) return;
+        const normalizedTarget = normalizeReviewId(targetReviewParam);
+        if (!normalizedTarget) return;
+
+        const reviews = product.reviews || [];
+        const targetIndex = reviews.findIndex((item) => normalizeReviewId(item.id) === normalizedTarget);
+        if (targetIndex < 0) return;
+
+        const needed = Math.max(REVIEWS_PAGE_SIZE, targetIndex + 1);
+        setVisibleReviewsCount((prev) => Math.max(prev, needed));
+        setHighlightedReviewId(normalizedTarget);
+
+        const timer = window.setTimeout(() => {
+            const el = document.getElementById(`review-${normalizedTarget}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 120);
+
+        return () => window.clearTimeout(timer);
+    }, [product, targetReviewParam]);
 
     const buyNow = async () => {
         if (!product) return;
@@ -390,7 +420,7 @@ export default function ProductPage() {
                                 <div className="reviews-list" id="reviews-list">
                                     {allReviews.length ? (
                                         visibleReviews.map((item) => (
-                                            <div className="review-card" key={item.id}>
+                                            <div className={`review-card ${highlightedReviewId && normalizeReviewId(item.id) === highlightedReviewId ? 'review-card-highlight' : ''}`} key={item.id} id={`review-${normalizeReviewId(item.id)}`}>
                                                 <div className="review-header">
                                                     <div>
                                                         <span className="review-author">{item.user_name}</span>

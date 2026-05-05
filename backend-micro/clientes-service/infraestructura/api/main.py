@@ -1010,6 +1010,34 @@ def eliminar_resena(
     return {'status': 'ok', 'deleted': True, 'review_id': f'r-{numeric_id}'}
 
 
+@app.get('/reviews/{review_id}/context')
+def obtener_contexto_resena(
+    review_id: str,
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
+    raw_id = str(review_id or '').strip().lower()
+    if raw_id.startswith('r-'):
+        raw_id = raw_id[2:]
+
+    try:
+        numeric_id = int(raw_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='ID de reseña invalido') from None
+
+    review = db.get(Resena, numeric_id)
+    if not review:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Reseña no encontrada')
+
+    return {
+        'status': 'ok',
+        'context': {
+            'review_id': f'r-{numeric_id}',
+            'product_id': review.product_id,
+        },
+    }
+
+
 @app.post('/reports')
 def crear_reporte(
     payload: ReportIn,

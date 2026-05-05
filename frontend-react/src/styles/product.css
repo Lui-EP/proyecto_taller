@@ -318,6 +318,11 @@
     padding: var(--spacing-lg);
 }
 
+.review-card-highlight {
+    border-color: var(--terracotta);
+    box-shadow: 0 0 0 2px rgba(176, 114, 43, 0.2);
+}
+
 .review-header {
     display: flex;
     align-items: flex-start;

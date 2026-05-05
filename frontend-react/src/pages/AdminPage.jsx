@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
@@ -157,7 +157,7 @@ function AdminSelect({ value, options, onChange, ariaLabel = 'Seleccionar opcion
                 onClick={() => setOpen((prev) => !prev)}
             >
                 <span>{selected.label}</span>
-                <span className="adminx-selectbox-arrow" aria-hidden="true">▾</span>
+                <span className="adminx-selectbox-arrow" aria-hidden="true">â–¾</span>
             </button>
             {open ? (
                 <div className="adminx-selectbox-menu" role="listbox" aria-label={ariaLabel}>
@@ -232,7 +232,7 @@ function UserCard({ user, type, mercado, onStatusChange }) {
                             <StatusPill value={status} />
                         </div>
                         <p className="adminx-subtext">{user.email || 'Sin correo'}</p>
-                        <p className="adminx-subtext">{user.phone || 'Sin telefono'} · Alta: {mercado.formatDate(user.created_at)}</p>
+                        <p className="adminx-subtext">{user.phone || 'Sin telefono'} Â· Alta: {mercado.formatDate(user.created_at)}</p>
                     </div>
                 </div>
                 <div className="adminx-actions">
@@ -520,11 +520,11 @@ export default function AdminPage() {
     const deleteReportedReview = async (report) => {
         const reviewId = report?.target_id;
         if (!reviewId) {
-            mercado.showToast('Reporte sin reseña vinculada', 'error');
+            mercado.showToast('Reporte sin reseÃ±a vinculada', 'error');
             return;
         }
 
-        const accepted = window.confirm('¿Eliminar este comentario reportado?');
+        const accepted = window.confirm('Â¿Eliminar este comentario reportado?');
         if (!accepted) return;
 
         try {
@@ -539,6 +539,35 @@ export default function AdminPage() {
         }
     };
 
+    const goToReportedTarget = async (report) => {
+        const targetType = String(report?.target_type || '').toLowerCase();
+        const targetId = String(report?.target_id || '').trim();
+        if (!targetId) {
+            mercado.showToast('Este reporte no tiene destino valido', 'error');
+            return;
+        }
+
+        try {
+            if (targetType === 'product') {
+                navigate(`/producto?id=${encodeURIComponent(targetId)}`);
+                return;
+            }
+
+            if (targetType === 'review') {
+                const context = await mercado.AdminAPI.getReviewContext(targetId);
+                if (!context?.product_id) {
+                    mercado.showToast('No se encontró el producto de esta reseña', 'error');
+                    return;
+                }
+                navigate(`/producto?id=${encodeURIComponent(context.product_id)}&review=${encodeURIComponent(context.review_id || targetId)}`);
+                return;
+            }
+
+            mercado.showToast('Redirección no disponible para este tipo de reporte', 'error');
+        } catch (error) {
+            mercado.showToast(error.message || 'No se pudo abrir el destino del reporte', 'error');
+        }
+    };
     const filteredSellers = useMemo(() => {
         const term = sellerSearch.trim().toLowerCase();
 
@@ -958,6 +987,11 @@ export default function AdminPage() {
                                     {report.admin_notes ? <p className="adminx-subtext">Notas: {report.admin_notes}</p> : null}
 
                                     <div className="adminx-actions adminx-actions--wrap">
+                                        {(String(report.target_type) === 'review' || String(report.target_type) === 'product') ? (
+                                            <button className="btn btn-primary btn-sm" type="button" onClick={() => goToReportedTarget(report)}>
+                                                Ir al problema
+                                            </button>
+                                        ) : null}
                                         {String(report.target_type) === 'review' ? (
                                             <button className="btn btn-outline btn-sm" type="button" onClick={() => deleteReportedReview(report)}>
                                                 Eliminar comentario
@@ -988,4 +1022,5 @@ export default function AdminPage() {
         </main>
     );
 }
+
 

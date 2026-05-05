@@ -898,6 +898,12 @@ function createMercadoLocal() {
         if (!safeId) throw new Error('ID de reseña invalido');
         return fetchJson(CLIENTES_API_URL, `/reviews/${encodeURIComponent(safeId)}`, { method: 'DELETE' });
     };
+    mercado.AdminAPI.getReviewContext = async (reviewId) => {
+        const safeId = normalizeText(reviewId, '');
+        if (!safeId) throw new Error('ID de reseña invalido');
+        const payload = await fetchJson(CLIENTES_API_URL, `/reviews/${encodeURIComponent(safeId)}/context`);
+        return payload?.context || null;
+    };
 
     mercado.apiRequest = async (endpoint, options = {}) => {
         const path = String(endpoint || '');
