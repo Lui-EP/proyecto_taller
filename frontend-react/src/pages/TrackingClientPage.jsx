@@ -26,6 +26,7 @@ function normalizeStatus(value) {
 
 function geoPermissionLabel(permission) {
     if (permission === 'granted') return 'Permiso de ubicacion activo';
+    if (permission === 'from_order') return 'Ubicacion tomada del pedido confirmado';
     if (permission === 'denied') return 'Permiso de ubicacion denegado';
     if (permission === 'unsupported') return 'Ubicacion no soportada en este navegador';
     if (permission === 'error') return 'No se pudo obtener tu ubicacion';
@@ -292,6 +293,24 @@ export default function TrackingClientPage() {
         });
     }, [activeRouteData, clientLocation, destinationLat, destinationLng, hasDestinationPoint, order, resolvedCourierLat, resolvedCourierLng]);
 
+    useEffect(() => {
+        if (isPickup || !order || clientLocation) return;
+        if (!isValidCoords(order?.delivery_location)) return;
+
+        const coords = {
+            lat: Number(order.delivery_location.lat),
+            lng: Number(order.delivery_location.lng),
+        };
+        setClientLocation(coords);
+        setClientGeoPermission((prev) => (prev === 'granted' ? prev : 'from_order'));
+
+        if (clientMarkerRef.current) {
+            clientMarkerRef.current.setLatLng([coords.lat, coords.lng]);
+            clientMarkerRef.current.setOpacity(1);
+            clientMarkerRef.current.setPopupContent('<strong>Ubicacion de entrega confirmada</strong>');
+        }
+    }, [clientLocation, isPickup, order]);
+
     const requestClientLocation = () => {
         if (!navigator.geolocation) {
             setClientGeoPermission('unsupported');
@@ -370,7 +389,7 @@ export default function TrackingClientPage() {
                     <p className="tracking-updated">Última actualización: {order?.updated_at ? mercado.formatDate(order.updated_at) : '--'}</p>
                     <div className="tracking-geo-tools">
                         <button className="btn btn-secondary btn-sm" type="button" onClick={requestClientLocation} disabled={clientGeoPermission === 'requesting'}>
-                            {clientGeoPermission === 'requesting' ? 'Solicitando...' : 'Activar mi ubicacion'}
+                            {clientGeoPermission === 'requesting' ? 'Solicitando...' : 'Usar mi ubicacion actual'}
                         </button>
                         <p className={`tracking-geo-state geo-${clientGeoPermission}`}>{geoPermissionLabel(clientGeoPermission)}</p>
                         {!isPickup ? (

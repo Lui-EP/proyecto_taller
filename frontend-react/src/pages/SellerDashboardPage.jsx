@@ -606,11 +606,11 @@ export default function SellerDashboardPage() {
                         )}
                     </section>
 
-                    <section className="seller-orders-section">
+                    <section className="seller-orders-section" id="seguimiento-pedidos">
                         <div className="section-header-row">
                             <div>
-                                <h2>Pedidos recibidos</h2>
-                                <p className="seller-orders-caption">Aqui ves compras ya confirmadas del carrito de tus clientes.</p>
+                                <h2>Seguimiento de pedidos</h2>
+                                <p className="seller-orders-caption">Aqui ves compras ya confirmadas del carrito y su estado de avance.</p>
                             </div>
                             <span className="products-count">{sellerOrders.length} pedido(s)</span>
                         </div>

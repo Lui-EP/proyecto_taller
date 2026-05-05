@@ -70,6 +70,7 @@ export default function MainLayout({ children }) {
 
         if (session.user?.role === 'seller') {
             items.push({ to: '/vendedor', matchPath: '/vendedor', label: '📦 Panel Vendedor' });
+            items.push({ to: '/vendedor#seguimiento-pedidos', matchPath: '/vendedor', label: '📍 Seguimiento' });
         }
 
         if (session.user?.role === 'admin') {
@@ -283,6 +284,11 @@ export default function MainLayout({ children }) {
                                     {session.user?.role === 'seller' ? (
                                         <Link to="/vendedor" className="dropdown-item" onClick={() => setMenuOpen(false)}>
                                             <span>📦</span> Panel vendedor
+                                        </Link>
+                                    ) : null}
+                                    {session.user?.role === 'seller' ? (
+                                        <Link to="/vendedor#seguimiento-pedidos" className="dropdown-item" onClick={() => setMenuOpen(false)}>
+                                            <span>📍</span> Seguimiento
                                         </Link>
                                     ) : null}
                                     {session.user?.role === 'admin' ? (
