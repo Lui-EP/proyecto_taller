@@ -474,15 +474,6 @@ export default function SellerDashboardPage() {
                         </div>
                         <div className="metric-card">
                             <div className="metric-card-content">
-                                <div className="metric-icon">👁</div>
-                                <div>
-                                    <div className="metric-value">{metrics?.total_views || 0}</div>
-                                    <div className="metric-label">Vistas</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="metric-card">
-                            <div className="metric-card-content">
                                 <div className="metric-icon">❤</div>
                                 <div>
                                     <div className="metric-value">{metrics?.total_favorites || 0}</div>
@@ -779,7 +770,6 @@ export default function SellerDashboardPage() {
                                     </div>
                                     <div className="product-row-price">{mercado.formatPrice(product.price || 0)}</div>
                                     <div className="product-row-stats">
-                                        <span>👁 {product.views || 0}</span>
                                         <span>❤ {product.favorites_count || 0}</span>
                                     </div>
                                     <div className="product-row-actions">
@@ -974,3 +964,6 @@ export default function SellerDashboardPage() {
         </>
     );
 }
+
+
+

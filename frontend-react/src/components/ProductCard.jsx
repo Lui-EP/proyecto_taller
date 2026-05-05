@@ -83,7 +83,6 @@ export default function ProductCard({ product, onChanged }) {
                 <div className="product-stats">
                     <span className="product-stat">{stock} unidades</span>
                     <span className="product-stat">★ {product.average_rating || 0}</span>
-                    <span className="product-stat">👁 {product.views || 0}</span>
                 </div>
             </Link>
         </article>

@@ -399,7 +399,6 @@ export default function ProductPage() {
                                     <span>({product.reviews?.length || 0} reseñas)</span>
                                 </div>
                                 <div className="product-detail-stat"><span>📦</span><span>{product.stock || 0} unidades</span></div>
-                                <div className="product-detail-stat"><span>👁</span><span>{product.views || 0} vistas</span></div>
                                 <div className="product-detail-stat"><span>♥</span><span>{product.favorites_count || 0} favoritos</span></div>
                             </div>
 

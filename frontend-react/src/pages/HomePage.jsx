@@ -357,7 +357,6 @@ export default function HomePage() {
                                         <h3>{product.name}</h3>
                                         <p className="home-mobile-card-meta">{mercado.formatPrice(product.price)} · {stock} unidades</p>
                                         <div className="home-mobile-card-tags">
-                                            <span>👁 {product.views || 0}</span>
                                             <span>{product.category?.name || 'Catalogo'}</span>
                                         </div>
                                     </div>
