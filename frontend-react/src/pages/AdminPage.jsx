@@ -517,6 +517,28 @@ export default function AdminPage() {
         }
     };
 
+    const deleteReportedReview = async (report) => {
+        const reviewId = report?.target_id;
+        if (!reviewId) {
+            mercado.showToast('Reporte sin reseña vinculada', 'error');
+            return;
+        }
+
+        const accepted = window.confirm('¿Eliminar este comentario reportado?');
+        if (!accepted) return;
+
+        try {
+            await mercado.AdminAPI.deleteReview(reviewId);
+            if (String(report.status) !== 'resolved') {
+                await mercado.AdminAPI.updateReport(report.id, 'resolved', 'Comentario eliminado por admin');
+            }
+            mercado.showToast('Comentario eliminado');
+            await Promise.all([loadReports(reportFilter), loadStats()]);
+        } catch (error) {
+            mercado.showToast(error.message || 'No se pudo eliminar comentario', 'error');
+        }
+    };
+
     const filteredSellers = useMemo(() => {
         const term = sellerSearch.trim().toLowerCase();
 
@@ -936,6 +958,11 @@ export default function AdminPage() {
                                     {report.admin_notes ? <p className="adminx-subtext">Notas: {report.admin_notes}</p> : null}
 
                                     <div className="adminx-actions adminx-actions--wrap">
+                                        {String(report.target_type) === 'review' ? (
+                                            <button className="btn btn-outline btn-sm" type="button" onClick={() => deleteReportedReview(report)}>
+                                                Eliminar comentario
+                                            </button>
+                                        ) : null}
                                         {String(report.status) === 'pending' ? (
                                             <button className="btn btn-secondary btn-sm" type="button" onClick={() => updateReport(report.id, 'in_review')}>
                                                 Pasar a revision

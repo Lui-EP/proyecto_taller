@@ -194,9 +194,20 @@
 }
 
 .review-actions-footer {
-    margin-top: var(--spacing-lg);
     display: flex;
     justify-content: flex-end;
+}
+
+.reviews-right-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.reviews-pagination-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: var(--spacing-xs);
 }
 
 /* Seller Card */

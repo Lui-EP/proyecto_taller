@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
@@ -11,6 +11,7 @@ const REPORT_OPTIONS = [
     { value: 'scam', label: 'Posible estafa' },
     { value: 'other', label: 'Otro' },
 ];
+const REVIEWS_PAGE_SIZE = 8;
 
 export default function ProductPage() {
     const [searchParams] = useSearchParams();
@@ -27,6 +28,7 @@ export default function ProductPage() {
 
     const [review, setReview] = useState({ rating: 0, comment: '' });
     const [report, setReport] = useState({ reason: 'fake', description: '' });
+    const [visibleReviewsCount, setVisibleReviewsCount] = useState(REVIEWS_PAGE_SIZE);
 
     const images = useMemo(() => {
         if (!product) return [];
@@ -50,6 +52,7 @@ export default function ProductPage() {
                 if (!cancelled) {
                     setProduct(response);
                     setImageIndex(0);
+                    setVisibleReviewsCount(REVIEWS_PAGE_SIZE);
                     mercado.addToHistory(response);
                     session.syncState();
                 }
@@ -123,6 +126,7 @@ export default function ProductPage() {
             setReview({ rating: 0, comment: '' });
             const refreshed = await mercado.ProductsAPI.getById(product.id);
             setProduct(refreshed);
+            setVisibleReviewsCount((prev) => Math.max(prev, REVIEWS_PAGE_SIZE));
         } catch (error) {
             mercado.showToast(error.message || 'No se pudo enviar reseña', 'error');
         }
@@ -148,6 +152,21 @@ export default function ProductPage() {
             mercado.showToast('Reseña reportada');
         } catch {
             mercado.showToast('Error al reportar la reseña', 'error');
+        }
+    };
+
+    const deleteReviewAsAdmin = async (reviewId) => {
+        if (session.user?.role !== 'admin') return;
+        const accepted = window.confirm('¿Eliminar este comentario? Esta acción no se puede deshacer.');
+        if (!accepted) return;
+        try {
+            await mercado.AdminAPI.deleteReview(reviewId);
+            mercado.showToast('Comentario eliminado');
+            const refreshed = await mercado.ProductsAPI.getById(product.id);
+            setProduct(refreshed);
+            setVisibleReviewsCount((prev) => Math.max(REVIEWS_PAGE_SIZE, Math.min(prev, (refreshed.reviews || []).length)));
+        } catch (error) {
+            mercado.showToast(error.message || 'No se pudo eliminar el comentario', 'error');
         }
     };
 
@@ -214,6 +233,11 @@ export default function ProductPage() {
 
     const fallback = mercado.createPlaceholderImage(product.name || 'Producto');
     const averageRounded = Math.max(0, Math.min(5, Math.round(Number(product.average_rating || 0))));
+    const allReviews = product.reviews || [];
+    const visibleReviews = allReviews.slice(0, visibleReviewsCount);
+    const hasMoreReviews = allReviews.length > visibleReviews.length;
+    const canCollapseReviews = visibleReviewsCount > REVIEWS_PAGE_SIZE;
+    const isAdmin = session.user?.role === 'admin';
 
     return (
         <>
@@ -358,35 +382,58 @@ export default function ProductPage() {
                                 )}
                             </div>
 
-                            <div className="reviews-list" id="reviews-list">
-                                {(product.reviews || []).length ? (
-                                    (product.reviews || []).map((item) => (
-                                        <div className="review-card" key={item.id}>
-                                            <div className="review-header">
-                                                <div>
-                                                    <span className="review-author">{item.user_name}</span>
-                                                    <div className="review-stars">{'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}</div>
-                                                </div>
-                                                <div className="review-meta-actions">
-                                                    <span className="review-date">{mercado.formatDate(item.created_at)}</span>
-                                                    <button className="btn btn-secondary btn-sm" onClick={() => reportReview(item.id)} title="Reportar reseña">🚩</button>
-                                                </div>
-                                            </div>
-                                            {item.comment ? <p className="review-content">{item.comment}</p> : null}
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="empty-state">
-                                        <div className="empty-state-icon">💬</div>
-                                        <h3 className="empty-state-title">Sin reseñas aún</h3>
-                                        <p className="empty-state-description">Sé el primero en dejar una reseña.</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
+                            <div className="reviews-right-column">
+                                <div className="review-actions-footer">
+                                    <button className="btn btn-secondary btn-sm report-product-btn" onClick={() => setShowReportModal(true)}>🚩 Reportar producto</button>
+                                </div>
 
-                        <div className="review-actions-footer">
-                            <button className="btn btn-secondary btn-sm report-product-btn" onClick={() => setShowReportModal(true)}>🚩 Reportar producto</button>
+                                <div className="reviews-list" id="reviews-list">
+                                    {allReviews.length ? (
+                                        visibleReviews.map((item) => (
+                                            <div className="review-card" key={item.id}>
+                                                <div className="review-header">
+                                                    <div>
+                                                        <span className="review-author">{item.user_name}</span>
+                                                        <div className="review-stars">{'★'.repeat(item.rating)}{'☆'.repeat(5 - item.rating)}</div>
+                                                    </div>
+                                                    <div className="review-meta-actions">
+                                                        <span className="review-date">{mercado.formatDate(item.created_at)}</span>
+                                                        <button className="btn btn-secondary btn-sm" onClick={() => reportReview(item.id)} title="Reportar reseña">🚩</button>
+                                                        {isAdmin ? (
+                                                            <button className="btn btn-outline btn-sm" onClick={() => deleteReviewAsAdmin(item.id)} title="Eliminar comentario">
+                                                                Eliminar comentario
+                                                            </button>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                                {item.comment ? <p className="review-content">{item.comment}</p> : null}
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="empty-state">
+                                            <div className="empty-state-icon">💬</div>
+                                            <h3 className="empty-state-title">Sin reseñas aún</h3>
+                                            <p className="empty-state-description">Sé el primero en dejar una reseña.</p>
+                                        </div>
+                                    )}
+
+                                    {hasMoreReviews ? (
+                                        <div className="reviews-pagination-actions">
+                                            <button className="btn btn-secondary btn-sm" type="button" onClick={() => setVisibleReviewsCount((prev) => prev + REVIEWS_PAGE_SIZE)}>
+                                                Ver más reseñas
+                                            </button>
+                                        </div>
+                                    ) : null}
+
+                                    {!hasMoreReviews && canCollapseReviews ? (
+                                        <div className="reviews-pagination-actions">
+                                            <button className="btn btn-outline btn-sm" type="button" onClick={() => setVisibleReviewsCount(REVIEWS_PAGE_SIZE)}>
+                                                Ver menos
+                                            </button>
+                                        </div>
+                                    ) : null}
+                                </div>
+                            </div>
                         </div>
                     </section>
                 </div>

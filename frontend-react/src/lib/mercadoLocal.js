@@ -893,6 +893,11 @@ function createMercadoLocal() {
     mercado.AdminAPI.updateSellerStatus = async (id, statusValue) => fetchJson(CLIENTES_API_URL, `/admin/sellers/${encodeURIComponent(id)}/status?status=${encodeURIComponent(statusValue)}`, { method: 'PUT' });
     mercado.AdminAPI.updateUserStatus = async (id, statusValue) => fetchJson(CLIENTES_API_URL, `/admin/users/${encodeURIComponent(id)}/status?status=${encodeURIComponent(statusValue)}`, { method: 'PUT' });
     mercado.AdminAPI.updateReport = async (id, statusValue, notes) => fetchJson(CLIENTES_API_URL, `/reports/${encodeURIComponent(id)}?status=${encodeURIComponent(statusValue)}&admin_notes=${encodeURIComponent(notes || '')}`, { method: 'PUT' });
+    mercado.AdminAPI.deleteReview = async (reviewId) => {
+        const safeId = normalizeText(reviewId, '');
+        if (!safeId) throw new Error('ID de reseña invalido');
+        return fetchJson(CLIENTES_API_URL, `/reviews/${encodeURIComponent(safeId)}`, { method: 'DELETE' });
+    };
 
     mercado.apiRequest = async (endpoint, options = {}) => {
         const path = String(endpoint || '');

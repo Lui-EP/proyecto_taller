@@ -986,6 +986,30 @@ def crear_resena(
     return {'status': 'ok', 'review': serialize_resena(review)}
 
 
+@app.delete('/reviews/{review_id}')
+def eliminar_resena(
+    review_id: str,
+    db: Session = Depends(get_session),
+    _usuario: UsuarioApp = Depends(require_roles('admin')),
+):
+    raw_id = str(review_id or '').strip().lower()
+    if raw_id.startswith('r-'):
+        raw_id = raw_id[2:]
+
+    try:
+        numeric_id = int(raw_id)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='ID de reseña invalido') from None
+
+    review = db.get(Resena, numeric_id)
+    if not review:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Reseña no encontrada')
+
+    db.delete(review)
+    db.commit()
+    return {'status': 'ok', 'deleted': True, 'review_id': f'r-{numeric_id}'}
+
+
 @app.post('/reports')
 def crear_reporte(
     payload: ReportIn,
