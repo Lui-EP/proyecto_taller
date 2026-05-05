@@ -623,6 +623,12 @@ def eliminar_categoria(categoria_id: str, db: Session = Depends(get_session)):
     category = db.get(Categoria, categoria_id)
     if not category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Categoria no encontrada')
+    
+    db.query(Producto).filter(Producto.categoria == categoria_id).update({
+        Producto.categoria: 'sin-categoria',
+        Producto.categoria_label: 'Sin categoria'
+    }, synchronize_session=False)
+
     db.delete(category)
     db.commit()
     return {'status': 'ok', 'deleted': True}
