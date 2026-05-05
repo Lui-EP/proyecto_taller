@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import PageLoader from '../components/PageLoader';
@@ -15,8 +15,17 @@ export default function HistoryPage() {
     const loadHistory = useCallback(async () => {
         setLoading(true);
         try {
-            const list = await mercado.apiRequest('/history');
-            setProducts(list || []);
+            const orders = await mercado.apiRequest('/history');
+            const productIds = new Set();
+            (orders || []).forEach(order => {
+                (order.items || []).forEach(item => {
+                    if (item.product_id) productIds.add(item.product_id);
+                });
+            });
+
+            const catalog = await mercado.ProductsAPI.getAll();
+            const purchasedProducts = catalog.products.filter(p => productIds.has(p.id));
+            setProducts(purchasedProducts);
         } catch {
             setProducts([]);
             mercado.showToast('No se pudo cargar historial del servidor', 'error');
