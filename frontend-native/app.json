@@ -1,4 +1,4 @@
-﻿{
+{
   "expo": {
     "name": "MercadoLocal Native",
     "slug": "mercadolocal-native",
@@ -28,10 +28,20 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#fffaf2"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ],
+      "package": "com.luiep.mercadolocalnative"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "7c37fd3c-32ad-47d4-a705-aef3a16d4196"
+      }
     }
   }
 }

@@ -86,7 +86,7 @@ export default function SellerDashboardPage() {
     const [currentProductImages, setCurrentProductImages] = useState([]);
     const [selectedImageFiles, setSelectedImageFiles] = useState([]);
     const [savingProduct, setSavingProduct] = useState(false);
-    const [ordersView, setOrdersView] = useState('carts');
+    const [isTrackingOnly, setIsTrackingOnly] = useState(false);
 
     const canAccess = useMemo(
         () => ['seller', 'admin'].includes(session.user?.role || ''),
@@ -124,13 +124,7 @@ export default function SellerDashboardPage() {
     useEffect(() => {
         const applyViewFromHash = () => {
             const hash = String(window.location.hash || '').toLowerCase();
-            if (hash.includes('pendientes-recoger')) {
-                setOrdersView('pending');
-                return;
-            }
-            if (hash.includes('seguimiento-pedidos')) {
-                setOrdersView('tracking');
-            }
+            setIsTrackingOnly(hash.includes('seguimiento-pedidos'));
         };
 
         applyViewFromHash();
@@ -522,14 +516,32 @@ export default function SellerDashboardPage() {
                 <div className="container">
                     <div className="dashboard-header">
                         <div>
-                            <h1 className="dashboard-title">Panel de Vendedor</h1>
-                            <p className="dashboard-subtitle">Bienvenido, {welcomeName}</p>
+                            <h1 className="dashboard-title">{isTrackingOnly ? 'Seguimiento de pedidos' : 'Panel de Vendedor'}</h1>
+                            <p className="dashboard-subtitle">
+                                {isTrackingOnly
+                                    ? 'Aqui ves compras ya confirmadas del carrito y su estado de avance.'
+                                    : `Bienvenido, ${welcomeName}`}
+                            </p>
                         </div>
-                        <button className="btn btn-primary" type="button" onClick={() => openProductModal(null)}>
-                            <span>+</span> Nuevo Producto
-                        </button>
+                        {isTrackingOnly ? (
+                            <button
+                                className="btn btn-secondary"
+                                type="button"
+                                onClick={() => {
+                                    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+                                    setIsTrackingOnly(false);
+                                }}
+                            >
+                                Volver al panel
+                            </button>
+                        ) : (
+                            <button className="btn btn-primary" type="button" onClick={() => openProductModal(null)}>
+                                <span>+</span> Nuevo Producto
+                            </button>
+                        )}
                     </div>
 
+                    {!isTrackingOnly ? (
                     <div className="metrics-grid" id="metrics-grid">
                         <div className="metric-card">
                             <div className="metric-card-content">
@@ -586,7 +598,9 @@ export default function SellerDashboardPage() {
                             </div>
                         </div>
                     </div>
+                    ) : null}
 
+                    {!isTrackingOnly ? (
                     <div className="quick-actions">
                         <div className="action-card" onClick={() => openProductModal(null)}>
                             <div className="action-icon terracotta">📦</div>
@@ -604,8 +618,9 @@ export default function SellerDashboardPage() {
                             <p className="action-description">Gestiona tu suscripcion y beneficios</p>
                         </div>
                     </div>
+                    ) : null}
 
-                    {!hasValidStoreLocation ? (
+                    {!isTrackingOnly && !hasValidStoreLocation ? (
                         <section className="card seller-location-warning">
                             <h3>Configura la direccion de tu tienda</h3>
                             <p>
@@ -618,51 +633,7 @@ export default function SellerDashboardPage() {
                         </section>
                     ) : null}
 
-                    <section className="seller-orders-switch card">
-                        <div className="seller-orders-switch-row">
-                            <button
-                                type="button"
-                                className={`btn btn-sm ${ordersView === 'carts' ? 'btn-primary' : 'btn-secondary'}`}
-                                onClick={() => {
-                                    setOrdersView('carts');
-                                    if (window.location.hash) {
-                                        window.history.replaceState(null, '', window.location.pathname + window.location.search);
-                                    }
-                                }}
-                            >
-                                Carritos activos
-                            </button>
-                            <button
-                                type="button"
-                                className={`btn btn-sm ${ordersView === 'tracking' ? 'btn-primary' : 'btn-secondary'}`}
-                                onClick={() => {
-                                    setOrdersView('tracking');
-                                    window.location.hash = 'seguimiento-pedidos';
-                                }}
-                            >
-                                Seguimiento de pedidos
-                            </button>
-                            <button
-                                type="button"
-                                className={`btn btn-sm ${ordersView === 'pending' ? 'btn-primary' : 'btn-secondary'}`}
-                                onClick={() => {
-                                    setOrdersView('pending');
-                                    window.location.hash = 'pendientes-recoger';
-                                }}
-                            >
-                                Pendientes por recoger
-                            </button>
-                        </div>
-                        <p className="seller-orders-caption">
-                            {ordersView === 'carts'
-                                ? 'Vista de carritos antes de confirmar pago.'
-                                : ordersView === 'tracking'
-                                    ? 'Vista de pedidos confirmados y su avance.'
-                                    : 'Lista de clientes que deben recoger en tienda y confirmacion de entrega.'}
-                        </p>
-                    </section>
-
-                    {ordersView === 'carts' ? (
+                    {!isTrackingOnly ? (
                     <section className="seller-carts-section">
                         <div className="section-header-row">
                             <div>
@@ -724,7 +695,7 @@ export default function SellerDashboardPage() {
                     </section>
                     ) : null}
 
-                    {ordersView === 'tracking' ? (
+                    {isTrackingOnly ? (
                     <section className="seller-orders-section" id="seguimiento-pedidos">
                         <div className="section-header-row">
                             <div>
@@ -798,7 +769,7 @@ export default function SellerDashboardPage() {
                     </section>
                     ) : null}
 
-                    {ordersView === 'pending' ? (
+                    {!isTrackingOnly ? (
                     <section className="pickup-orders-section" id="pendientes-recoger">
                         <div className="section-header-row">
                             <h2>Compras pendientes para recoger</h2>
@@ -858,6 +829,7 @@ export default function SellerDashboardPage() {
                     </section>
                     ) : null}
 
+                    {!isTrackingOnly ? (
                     <section className="products-list-section">
                         <div className="section-header-row">
                             <h2>Mis Productos</h2>
@@ -911,7 +883,9 @@ export default function SellerDashboardPage() {
                             ))}
                         </div>
                     </section>
+                    ) : null}
 
+                    {!isTrackingOnly ? (
                     <div className="subscription-card">
                         <div className="subscription-info">
                             <h3>
@@ -924,6 +898,7 @@ export default function SellerDashboardPage() {
                             {isPremium ? 'Plan Activo' : 'Mejorar Plan'}
                         </button>
                     </div>
+                    ) : null}
                 </div>
             </main>
 
