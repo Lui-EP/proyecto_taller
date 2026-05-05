@@ -636,10 +636,20 @@ def eliminar_categoria(categoria_id: str, db: Session = Depends(get_session)):
 
 
 @app.get('/productos')
-def listar_productos(seller_id: str | None = Query(default=None), db: Session = Depends(get_session)):
+def listar_productos(
+    seller_id: str | None = Query(default=None),
+    status_value: str | None = Query(default=None, alias='status'),
+    include_all_status: bool = Query(default=False),
+    db: Session = Depends(get_session),
+):
     query = db.query(Producto)
     if seller_id:
         query = query.filter(Producto.seller_id == seller_id)
+    if status_value:
+        query = query.filter(Producto.status == str(status_value).strip().lower())
+    elif not include_all_status and not seller_id:
+        # Public catalog only shows approved products.
+        query = query.filter(Producto.status == 'approved')
     productos = query.order_by(Producto.created_at.desc()).all()
     return {'status': 'ok', 'products': [serialize_producto(producto, db) for producto in productos]}
 
@@ -676,6 +686,7 @@ def crear_producto(
         views=payload.views,
         image_key=payload.image_key,
         image_data=payload.image_data,
+        status='approved' if usuario.role == 'admin' else 'pending',
         created_at=datetime.utcnow(),
         updated_at=datetime.utcnow(),
     )

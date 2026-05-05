@@ -311,6 +311,7 @@ class Producto(Base):
     views = Column(Integer, nullable=False, default=0)
     image_key = Column(String(80), nullable=True)
     image_data = Column(Text, nullable=True)
+    status = Column(String(40), nullable=False, default='approved')
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -469,6 +470,10 @@ def init_db(retries: int = 20, delay_seconds: int = 2) -> None:
             with engine.connect() as conn:
                 conn.execute(text('SELECT 1'))
             Base.metadata.create_all(bind=engine)
+            # Ensure new columns exist in already-created databases.
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE productos ADD COLUMN IF NOT EXISTS status VARCHAR(40)"))
+                conn.execute(text("UPDATE productos SET status = 'approved' WHERE status IS NULL OR TRIM(status) = ''"))
             seed_productos()
             seed_usuarios_app()
             seed_categorias()

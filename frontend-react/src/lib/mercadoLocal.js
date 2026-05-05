@@ -353,8 +353,13 @@ function createMercadoLocal() {
         return payload;
     }
 
-    async function fetchRemoteProducts() {
-        const payload = await fetchJson(CLIENTES_API_URL, '/productos');
+    async function fetchRemoteProducts(params = {}) {
+        const query = new URLSearchParams();
+        if (params.seller_id) query.set('seller_id', String(params.seller_id));
+        if (params.status) query.set('status', String(params.status));
+        if (params.include_all_status) query.set('include_all_status', 'true');
+        const suffix = query.toString() ? `?${query.toString()}` : '';
+        const payload = await fetchJson(CLIENTES_API_URL, `/productos${suffix}`);
         const list = Array.isArray(payload?.products) ? payload.products : [];
         const normalized = list.map((product) => normalizeRemoteProduct(mercado, product));
         cache.productsById = new Map(normalized.map((item) => [String(item.id), item]));
@@ -458,7 +463,7 @@ function createMercadoLocal() {
     };
 
     mercado.ProductsAPI.getAll = async (params = {}) => {
-        let list = await fetchRemoteProducts();
+        let list = await fetchRemoteProducts(params);
         const statusFilter = normalizeText(params.status, '').toLowerCase();
         if (statusFilter) {
             list = list.filter((item) => String(item.status || '').toLowerCase() === statusFilter);
