@@ -833,6 +833,7 @@ export default function SellerDashboardPage() {
                                         required
                                     >
                                         <option value="">Selecciona...</option>
+                                        <option value="sin-categoria">Sin categoria</option>
                                         {categories.map((category) => (
                                             <option key={category.id} value={category.id}>{category.name}</option>
                                         ))}
