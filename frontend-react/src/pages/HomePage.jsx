@@ -33,7 +33,7 @@ function getCategoryIcon(name) {
 
 function resolveCategoryIcon(category = {}) {
     const custom = String(category?.metafora || '').trim();
-    if (custom) return custom;
+    if (custom && custom !== '📦') return custom;
     return getCategoryIcon(category?.name || '');
 }
 

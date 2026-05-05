@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+import unicodedata
 from datetime import datetime, timedelta, timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -369,7 +370,10 @@ def slugify_category(value: str) -> str:
 
 
 def infer_metafora_categoria(name: str) -> str:
-    normalized = ''.join(ch.lower() for ch in str(name or '') if ch.isalnum() or ch.isspace())
+    raw = str(name or '').strip()
+    no_accents = unicodedata.normalize('NFD', raw)
+    no_accents = ''.join(ch for ch in no_accents if unicodedata.category(ch) != 'Mn')
+    normalized = ''.join(ch.lower() for ch in no_accents if ch.isalnum() or ch.isspace())
     emoji_rules = [
         ('\U0001F4F1', ['celular', 'celulares', 'telefono', 'telefonia', 'smartphone', 'movil', 'electronica', 'tecnologia', 'laptop', 'computadora']),
         ('\U0001F36F', ['alimento', 'alimentos', 'comida', 'cafe', 'miel', 'bebida', 'snack', 'postre', 'dulce']),
@@ -382,6 +386,15 @@ def infer_metafora_categoria(name: str) -> str:
         if any(token in normalized for token in keys):
             return emoji
     return '\U0001F4E6'
+
+
+def resolve_metafora_categoria(name: str, metafora: str | None) -> str:
+    custom = str(metafora or '').strip()
+    inferred = infer_metafora_categoria(name)
+    # Si se quedó el emoji genérico en BD, intentamos recuperar uno más representativo por nombre.
+    if custom == '\U0001F4E6' and inferred != '\U0001F4E6':
+        return inferred
+    return custom or inferred
 
 
 def serialize_usuario(usuario: UsuarioApp, include_password: bool = False) -> dict:
@@ -661,7 +674,7 @@ def listar_categorias(db: Session = Depends(get_session)):
                 'id': item.categoria_id,
                 'name': item.nombre,
                 'description': item.descripcion or '',
-                'metafora': item.metafora or infer_metafora_categoria(item.nombre),
+                'metafora': resolve_metafora_categoria(item.nombre, item.metafora),
                 'status': item.status,
                 'created_at': item.created_at.isoformat() if item.created_at else '',
             }
@@ -693,7 +706,7 @@ def crear_categoria(payload: CategoriaIn, db: Session = Depends(get_session)):
             'id': category.categoria_id,
             'name': category.nombre,
             'description': category.descripcion or '',
-            'metafora': category.metafora or infer_metafora_categoria(category.nombre),
+            'metafora': resolve_metafora_categoria(category.nombre, category.metafora),
             'status': category.status,
             'created_at': category.created_at.isoformat() if category.created_at else '',
         },
