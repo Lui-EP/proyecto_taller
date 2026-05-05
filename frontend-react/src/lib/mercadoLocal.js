@@ -480,7 +480,10 @@ function createMercadoLocal() {
     mercado.CategoriesAPI.getAll = async () => {
         const payload = await fetchJson(CLIENTES_API_URL, '/categorias');
         const categories = Array.isArray(payload?.categories) ? payload.categories : [];
-        return categories.map((item) => ({ id: item.id, name: item.name, status: item.status || 'approved' }));
+        const isAdmin = mercado.AppState?.user?.role === 'admin';
+        return categories
+            .filter((item) => isAdmin || item.status === 'approved')
+            .map((item) => ({ id: item.id, name: item.name, status: item.status || 'approved' }));
     };
 
     mercado.CategoriesAPI.create = async (data) => {
