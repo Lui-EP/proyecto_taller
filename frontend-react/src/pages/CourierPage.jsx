@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 import { buildStraightLineRoute, fetchLocationIqRoute, isValidCoords } from '../lib/locationIqRouting';
 
@@ -128,7 +127,6 @@ function sortOrdersByPriority(orders, courierLocation, currentUserId) {
 
 export default function CourierPage() {
     const mercado = getMercadoLocal();
-    const navigate = useNavigate();
     const currentUserId = String(mercado.AppState?.user?.id || '');
 
     const [orders, setOrders] = useState([]);
@@ -507,13 +505,6 @@ export default function CourierPage() {
         mercado.showToast('Ubicacion del pedido actualizada con tu posicion');
     };
 
-    const openTracking = () => {
-        if (!selectedOrder) return;
-        const params = new URLSearchParams({ id: selectedOrder.id });
-        if (selectedOrder.tracking_token) params.set('token', selectedOrder.tracking_token);
-        navigate(`/seguimiento-cliente?${params.toString()}`);
-    };
-
     const openRouteToCustomer = () => {
         if (!selectedOrder) return;
         const originPoint = isValidCoords(courierLocation) ? courierLocation : BASE_LOCATION;
@@ -717,14 +708,6 @@ export default function CourierPage() {
                                     </button>
                                     <button className="btn btn-primary" type="button" onClick={moveToMyLocation} disabled={!canOperateOrder}>
                                         Compartir mi ubicacion
-                                    </button>
-                                    <button
-                                        className="btn btn-outline"
-                                        type="button"
-                                        onClick={openTracking}
-                                        disabled={!selectedOrder || (!isMine && !selectedOrder.tracking_token)}
-                                    >
-                                        Abrir seguimiento cliente
                                     </button>
                                     <button
                                         className="btn btn-outline"

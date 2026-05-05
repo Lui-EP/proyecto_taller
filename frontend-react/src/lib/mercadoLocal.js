@@ -96,12 +96,15 @@ function normalizeRemoteUser(remoteUser = {}) {
     const name = normalizeText(remoteUser.name, 'Usuario');
     const phone = normalizeText(remoteUser.phone, '');
     const address = normalizeText(remoteUser.address, '');
+    const remoteStatus = normalizeText(remoteUser.status, '').toLowerCase();
+    const status = remoteStatus
+        || (remoteUser.active === false ? 'blocked' : 'verified');
     return {
         id,
         name,
         email: normalizeText(remoteUser.email, ''),
         role,
-        status: 'verified',
+        status,
         phone,
         curp: '',
         subscription: { plan: 'free' },
@@ -456,6 +459,12 @@ function createMercadoLocal() {
 
     mercado.ProductsAPI.getAll = async (params = {}) => {
         let list = await fetchRemoteProducts();
+        const statusFilter = normalizeText(params.status, '').toLowerCase();
+        if (statusFilter) {
+            list = list.filter((item) => String(item.status || '').toLowerCase() === statusFilter);
+        } else if (!params.include_all_status) {
+            list = list.filter((item) => String(item.status || '').toLowerCase() === 'approved');
+        }
         const search = normalizeText(params.search, '').toLowerCase();
         if (search) {
             list = list.filter((item) =>
@@ -513,7 +522,7 @@ function createMercadoLocal() {
 
     mercado.ProductsAPI.getSellerProducts = async () => {
         const sellerId = normalizeText(mercado.AppState?.user?.id, '');
-        const result = await mercado.ProductsAPI.getAll({ seller_id: sellerId || undefined });
+        const result = await mercado.ProductsAPI.getAll({ seller_id: sellerId || undefined, include_all_status: true });
         return result?.products || [];
     };
 
@@ -867,16 +876,16 @@ function createMercadoLocal() {
     mercado.AdminAPI.getUsers = async (role = '') => {
         requireAuthenticatedUser();
         const query = role ? `?role=${encodeURIComponent(role)}` : '';
-        const payload = await fetchJson(CLIENTES_API_URL, `/usuarios-app${query}`);
+        const payload = await fetchJson(CLIENTES_API_URL, `/admin/users${query}`);
         const list = Array.isArray(payload?.users) ? payload.users : [];
         return list.map((item) => normalizeRemoteUser(item));
     };
     mercado.AdminAPI.getStats = async () => {
         requireAuthenticatedUser();
         const [products, orders, users] = await Promise.all([
-            mercado.ProductsAPI.getAll(),
+            mercado.ProductsAPI.getAll({ include_all_status: true }),
             fetchRemoteOrders(),
-            fetchJson(CLIENTES_API_URL, '/usuarios-app'),
+            fetchJson(CLIENTES_API_URL, '/admin/users'),
         ]);
         const userList = Array.isArray(users?.users) ? users.users : [];
         return {

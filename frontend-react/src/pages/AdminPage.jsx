@@ -26,9 +26,7 @@ const PRODUCT_FILTERS = [
 const USER_FILTERS = [
     { value: '', label: 'Todos' },
     { value: 'verified', label: 'Activos / verificados' },
-    { value: 'new', label: 'Nuevos' },
-    { value: 'observation', label: 'En observacion' },
-    { value: 'suspended', label: 'Suspendidos' },
+    { value: 'blocked', label: 'Bloqueados' },
 ];
 
 const REPORT_FILTERS = [
@@ -37,6 +35,12 @@ const REPORT_FILTERS = [
     { value: 'resolved', label: 'Resueltos' },
     { value: 'rejected', label: 'Descartados' },
     { value: '', label: 'Todos' },
+];
+const CATEGORY_FILTERS = [
+    { value: '', label: 'Todas' },
+    { value: 'approved', label: 'Aprobadas' },
+    { value: 'pending', label: 'Pendientes' },
+    { value: 'rejected', label: 'Rechazadas' },
 ];
 
 const ORDER_FILTERS = [
@@ -55,6 +59,7 @@ function isActiveStatus(status) {
 function statusLabel(status) {
     const safe = String(status || '').toLowerCase();
     if (safe === 'verified') return 'Verificado';
+    if (safe === 'blocked') return 'Bloqueado';
     if (safe === 'new') return 'Nuevo';
     if (safe === 'observation') return 'En observacion';
     if (safe === 'suspended') return 'Suspendido';
@@ -239,11 +244,8 @@ function UserCard({ user, type, mercado, onStatusChange }) {
                     <button className="btn btn-sage btn-sm" type="button" disabled={status === 'verified'} onClick={() => onStatusChange(user.id, 'verified')}>
                         Activar
                     </button>
-                    <button className="btn btn-secondary btn-sm" type="button" disabled={status === 'observation'} onClick={() => onStatusChange(user.id, 'observation')}>
-                        Observacion
-                    </button>
-                    <button className="btn btn-outline btn-sm adminx-btn-danger" type="button" disabled={status === 'suspended'} onClick={() => onStatusChange(user.id, 'suspended')}>
-                        Suspender
+                    <button className="btn btn-outline btn-sm adminx-btn-danger" type="button" disabled={status === 'blocked'} onClick={() => onStatusChange(user.id, 'blocked')}>
+                        Bloquear
                     </button>
                 </div>
             </div>
@@ -283,7 +285,8 @@ export default function AdminPage() {
     const [sellers, setSellers] = useState([]);
     const [couriers, setCouriers] = useState([]);
 
-    const [productFilter, setProductFilter] = useState('pending');
+    const [productFilter, setProductFilter] = useState('');
+    const [categoryFilter, setCategoryFilter] = useState('');
     const [sellerFilter, setSellerFilter] = useState('');
     const [courierFilter, setCourierFilter] = useState('');
     const [orderFilter, setOrderFilter] = useState('');
@@ -301,7 +304,7 @@ export default function AdminPage() {
     }, [mercado]);
 
     const loadProducts = useCallback(async (status = productFilter) => {
-        const response = await mercado.ProductsAPI.getAll({ status: status || undefined, limit: 120 });
+        const response = await mercado.ProductsAPI.getAll({ status: status || undefined, include_all_status: true, limit: 120 });
         setProducts(response.products || []);
     }, [mercado, productFilter]);
 
@@ -594,6 +597,18 @@ export default function AdminPage() {
         });
     }, [couriers, courierFilter, courierSearch]);
 
+    const filteredProducts = useMemo(() => {
+        const safeStatus = String(productFilter || '').toLowerCase();
+        if (!safeStatus) return products;
+        return products.filter((item) => String(item.status || '').toLowerCase() === safeStatus);
+    }, [products, productFilter]);
+
+    const filteredCategories = useMemo(() => {
+        const safeStatus = String(categoryFilter || '').toLowerCase();
+        if (!safeStatus) return categories;
+        return categories.filter((item) => String(item.status || '').toLowerCase() === safeStatus);
+    }, [categories, categoryFilter]);
+
     const filteredOrders = useMemo(() => {
         if (!orderFilter) return orders;
         return orders.filter((order) => String(order.status || '').toLowerCase() === orderFilter);
@@ -688,7 +703,7 @@ export default function AdminPage() {
                         </div>
 
                         <div className="adminx-list">
-                            {products.length ? products.map((product) => {
+                            {filteredProducts.length ? filteredProducts.map((product) => {
                                 const image = resolveImageSrc(
                                     product.images?.[0],
                                     mercado.createPlaceholderImage(product.name || 'Producto')
@@ -766,6 +781,12 @@ export default function AdminPage() {
                                 <h2>Gestion de categorias</h2>
                                 <p>Administra categorias publicas y solicitudes de nuevos rubros.</p>
                             </div>
+                            <AdminSelect
+                                value={categoryFilter}
+                                options={CATEGORY_FILTERS}
+                                onChange={setCategoryFilter}
+                                ariaLabel="Filtro de categorias"
+                            />
                         </div>
 
                         <form className="adminx-form card" onSubmit={createCategory}>
@@ -797,7 +818,7 @@ export default function AdminPage() {
                         </form>
 
                         <div className="adminx-list">
-                            {categories.length ? categories.map((category) => (
+                            {filteredCategories.length ? filteredCategories.map((category) => (
                                 <article className="adminx-simple-row card" key={category.id}>
                                     <div>
                                         <h3>{category.name || 'Categoria'}</h3>
@@ -832,7 +853,7 @@ export default function AdminPage() {
                                         </button>
                                     </div>
                                 </article>
-                            )) : <p className="adminx-empty">No hay categorias registradas.</p>}
+                            )) : <p className="adminx-empty">No hay categorias para este filtro.</p>}
                         </div>
                     </section>
 
