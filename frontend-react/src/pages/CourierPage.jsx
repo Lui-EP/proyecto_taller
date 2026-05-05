@@ -508,6 +508,26 @@ export default function CourierPage() {
         window.open(`/seguimiento-cliente?${params.toString()}`, '_blank', 'noopener,noreferrer');
     };
 
+    const openRouteToCustomer = () => {
+        if (!selectedOrder) return;
+        const originPoint = isValidCoords(courierLocation) ? courierLocation : BASE_LOCATION;
+        if (selectedDestination) {
+            const destination = `${Number(selectedDestination.lat)},${Number(selectedDestination.lng)}`;
+            const origin = `${Number(originPoint.lat)},${Number(originPoint.lng)}`;
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=driving`;
+            window.open(url, '_blank', 'noopener,noreferrer');
+            return;
+        }
+        const addressText = String(selectedOrder?.customer?.address || '').trim();
+        if (addressText) {
+            const origin = `${Number(originPoint.lat)},${Number(originPoint.lng)}`;
+            const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(addressText)}&travelmode=driving`;
+            window.open(url, '_blank', 'noopener,noreferrer');
+            return;
+        }
+        mercado.showToast('Este pedido no tiene direccion destino valida', 'error');
+    };
+
 
     return (
         <div className="container page-main courier-page">
@@ -534,7 +554,7 @@ export default function CourierPage() {
                             className={`orders-filter-btn ${ordersFilter === 'all' ? 'is-active' : ''}`}
                             onClick={() => setOrdersFilter('all')}
                         >
-                            Todos
+                            Disponibles + mios
                         </button>
                         <button
                             type="button"
@@ -699,6 +719,14 @@ export default function CourierPage() {
                                         disabled={!selectedOrder || (!isMine && !selectedOrder.tracking_token)}
                                     >
                                         Abrir seguimiento cliente
+                                    </button>
+                                    <button
+                                        className="btn btn-outline"
+                                        type="button"
+                                        onClick={openRouteToCustomer}
+                                        disabled={!selectedOrder}
+                                    >
+                                        Ir a domicilio
                                     </button>
                                     <button className="btn btn-primary" type="button" onClick={takeOrder} disabled={!canTakeOrder}>
                                         Tomar pedido

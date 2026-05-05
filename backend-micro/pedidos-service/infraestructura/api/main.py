@@ -17,6 +17,7 @@ app = FastAPI(title='Microservicio Pedidos MercadoLocal', version='2.0.0')
 security_scheme = HTTPBearer(auto_error=False)
 JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', '').strip()
 JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256').strip()
+COURIER_ACTIVE_STATUSES = {'pedido_realizado', 'asignado', 'en_transito', 'listo_recoger'}
 
 app.add_middleware(
     CORSMiddleware,
@@ -192,6 +193,22 @@ def cambiar_estado_pedido(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para este repartidor')
         if pedido.courier_id and pedido.courier_id != requester_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='Pedido asignado a otro repartidor')
+        wants_to_take_order = status_value in {'asignado', 'en_transito', 'pedido_realizado'}
+        if wants_to_take_order and (not pedido.courier_id or pedido.courier_id == requester_id):
+            active_assigned = (
+                db.query(PedidoApp)
+                .filter(
+                    PedidoApp.courier_id == requester_id,
+                    PedidoApp.pedido_uid != pedido_uid,
+                    PedidoApp.status.in_(COURIER_ACTIVE_STATUSES),
+                )
+                .first()
+            )
+            if active_assigned:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail='Ya tienes un pedido activo. Entregalo antes de tomar otro.',
+                )
         payload.courierId = requester_id
 
     pedido.status = status_value
@@ -238,7 +255,13 @@ def listar_pedidos(
         serialized = [
             pedido
             for pedido in serialized
-            if not str(pedido.get('courierId') or '').strip() or str(pedido.get('courierId') or '').strip() == requester_id
+            if (
+                str(pedido.get('status') or '').strip().lower() in COURIER_ACTIVE_STATUSES
+                and (
+                    not str(pedido.get('courierId') or '').strip()
+                    or str(pedido.get('courierId') or '').strip() == requester_id
+                )
+            )
         ]
     elif courier_id:
         serialized = [pedido for pedido in serialized if pedido['courierId'] == courier_id]
