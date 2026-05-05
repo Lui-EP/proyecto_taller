@@ -299,15 +299,18 @@ def slugify_category(value: str) -> str:
 
 def infer_metafora_categoria(name: str) -> str:
     normalized = ''.join(ch.lower() for ch in str(name or '') if ch.isalnum() or ch.isspace())
-    if any(token in normalized for token in ['alimento', 'comida', 'cafe', 'miel', 'bebida']):
-        return '🍯'
-    if any(token in normalized for token in ['textil', 'ropa', 'rebozo', 'tejido']):
-        return '🧵'
-    if any(token in normalized for token in ['joyeria', 'joyeria', 'ambar', 'pulsera', 'anillo']):
-        return '💍'
-    if any(token in normalized for token in ['arte', 'artesania', 'barro', 'canasta', 'madera']):
-        return '🎨'
-    return '📦'
+    emoji_rules = [
+        ('\U0001F4F1', ['celular', 'celulares', 'telefono', 'telefonia', 'smartphone', 'movil', 'electronica', 'tecnologia', 'laptop', 'computadora']),
+        ('\U0001F36F', ['alimento', 'alimentos', 'comida', 'cafe', 'miel', 'bebida', 'snack', 'postre', 'dulce']),
+        ('\U0001F9F5', ['textil', 'textiles', 'ropa', 'rebozo', 'tejido', 'moda', 'prenda']),
+        ('\U0001F48D', ['joyeria', 'ambar', 'pulsera', 'anillo', 'arete', 'collar', 'accesorio']),
+        ('\U0001F3A8', ['arte', 'artesania', 'barro', 'canasta', 'madera', 'ceramica', 'manualidad', 'decoracion']),
+        ('\U0001F33F', ['planta', 'jardin', 'vivero', 'flor']),
+    ]
+    for emoji, keys in emoji_rules:
+        if any(token in normalized for token in keys):
+            return emoji
+    return '\U0001F4E6'
 
 
 def serialize_usuario(usuario: UsuarioApp, include_password: bool = False) -> dict:

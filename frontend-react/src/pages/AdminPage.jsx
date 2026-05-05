@@ -57,10 +57,17 @@ function inferCategoryMetaphor(name = '') {
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .toLowerCase();
-    if (['alimento', 'comida', 'cafe', 'miel', 'bebida'].some((token) => normalized.includes(token))) return '🍯';
-    if (['textil', 'ropa', 'rebozo', 'tejido'].some((token) => normalized.includes(token))) return '🧵';
-    if (['joyeria', 'ambar', 'pulsera', 'anillo'].some((token) => normalized.includes(token))) return '💍';
-    if (['arte', 'artesania', 'barro', 'canasta', 'madera'].some((token) => normalized.includes(token))) return '🎨';
+    const emojiRules = [
+        { emoji: '📱', keys: ['celular', 'celulares', 'telefono', 'telefonia', 'smartphone', 'movil', 'electronica', 'tecnologia', 'laptop', 'computadora'] },
+        { emoji: '🍯', keys: ['alimento', 'alimentos', 'comida', 'cafe', 'miel', 'bebida', 'snack', 'postre', 'dulce'] },
+        { emoji: '🧵', keys: ['textil', 'textiles', 'ropa', 'rebozo', 'tejido', 'moda', 'prenda'] },
+        { emoji: '💍', keys: ['joyeria', 'ambar', 'pulsera', 'anillo', 'arete', 'collar', 'accesorio'] },
+        { emoji: '🎨', keys: ['arte', 'artesania', 'barro', 'canasta', 'madera', 'ceramica', 'manualidad', 'decoracion'] },
+        { emoji: '🌿', keys: ['planta', 'jardin', 'vivero', 'flor'] },
+    ];
+    for (const rule of emojiRules) {
+        if (rule.keys.some((token) => normalized.includes(token))) return rule.emoji;
+    }
     return '📦';
 }
 
@@ -889,7 +896,7 @@ export default function AdminPage() {
                                 </div>
                                 <div className="form-group">
                                     <label className="form-label" htmlFor="category-metafora">Metafora (emoji)</label>
-                                    <div style={{ display: 'flex', gap: '0.45rem' }}>
+                                    <div className="adminx-metafora-row">
                                         <input
                                             id="category-metafora"
                                             className="form-input"
@@ -899,11 +906,11 @@ export default function AdminPage() {
                                         />
                                         <button
                                             type="button"
-                                            className="btn btn-secondary btn-sm"
+                                            className="btn btn-secondary btn-sm adminx-btn-auto-emoji"
                                             onClick={() => setCategoryForm((prev) => ({ ...prev, metafora: inferCategoryMetaphor(prev.name) }))}
                                             title="Asignar automáticamente por nombre"
                                         >
-                                            Auto
+                                            Auto emoji
                                         </button>
                                     </div>
                                 </div>

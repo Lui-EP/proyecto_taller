@@ -482,6 +482,19 @@
     gap: var(--spacing-sm);
 }
 
+.adminx-metafora-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    align-items: center;
+}
+
+.adminx-btn-auto-emoji {
+    min-width: 132px;
+    white-space: nowrap;
+    justify-content: center;
+}
+
 .adminx-simple-row {
     display: flex;
     justify-content: space-between;
