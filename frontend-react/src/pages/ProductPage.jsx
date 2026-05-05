@@ -164,9 +164,13 @@ export default function ProductPage() {
 
     const buyNow = async () => {
         if (!product) return;
-        await mercado.addProductToCart(product.id, 1);
-        session.syncState();
-        navigate('/checkout');
+        try {
+            await mercado.addProductToCart(product.id, 1);
+            session.syncState();
+            navigate('/checkout');
+        } catch (error) {
+            mercado.showToast(error.message || 'No se pudo iniciar la compra', 'error');
+        }
     };
 
     const toggleFavorite = async () => {

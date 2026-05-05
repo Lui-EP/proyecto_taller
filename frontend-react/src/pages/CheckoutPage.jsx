@@ -1242,7 +1242,7 @@ export default function CheckoutPage() {
             session.syncState();
 
             const params = new URLSearchParams({ id: order.id });
-            if (order.guest_token) params.set('token', order.guest_token);
+            if (order.tracking_token) params.set('token', order.tracking_token);
             navigate(`/seguimiento-cliente?${params.toString()}`);
         } catch (error) {
             mercado.showToast(error.message || 'No se pudo confirmar el pedido', 'error');

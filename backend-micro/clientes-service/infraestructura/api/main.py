@@ -137,6 +137,15 @@ class SellerProfileIn(BaseModel):
     curp: str | None = Field(default='')
 
 
+class StockMoveItemIn(BaseModel):
+    product_id: str = Field(min_length=2, max_length=60)
+    quantity: int = Field(ge=1)
+
+
+class StockMoveIn(BaseModel):
+    items: list[StockMoveItemIn] = Field(min_length=1)
+
+
 class TokenUser(BaseModel):
     id: str
     role: str
@@ -342,6 +351,30 @@ def get_current_user_from_jwt(
     return usuario
 
 
+def get_optional_user_from_jwt(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+    db: Session = Depends(get_session),
+) -> UsuarioApp | None:
+    if not credentials or credentials.scheme.lower() != 'bearer':
+        return None
+
+    ensure_jwt_configured()
+    token = credentials.credentials or ''
+    try:
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except JWTError:
+        return None
+
+    user_id = str(payload.get('sub') or '').strip()
+    if not user_id:
+        return None
+
+    usuario = db.get(UsuarioApp, user_id)
+    if not usuario or not usuario.activo:
+        return None
+    return usuario
+
+
 def require_roles(*roles: str):
     normalized_roles = {normalize_role(role) for role in roles}
 
@@ -359,6 +392,27 @@ def ensure_seller_or_admin_scope(target_seller_id: str, usuario: UsuarioApp) -> 
         return
     if role != 'seller' or usuario.usuario_id != str(target_seller_id or '').strip():
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para este vendedor')
+
+
+def is_guest_owner_id(owner_id: str) -> bool:
+    safe = str(owner_id or '').strip().lower()
+    return safe.startswith('guest-') and len(safe) <= 120
+
+
+def resolve_cart_owner_id(owner_id: str | None, usuario: UsuarioApp | None) -> str:
+    requested = str(owner_id or '').strip()
+    if usuario:
+        if normalize_role(usuario.role) == 'admin':
+            return requested or usuario.usuario_id
+        return usuario.usuario_id
+
+    if is_guest_owner_id(requested):
+        return requested
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail='Inicia sesion o usa una sesion de invitado valida para el carrito.',
+    )
 
 
 def slugify_category(value: str) -> str:
@@ -876,17 +930,81 @@ def destacar_producto(
     return {'status': 'ok', 'product_id': producto_id, 'featured': True, 'days': int(max(1, days))}
 
 
+@app.post('/internal/products/consume-stock')
+def internal_consumir_stock(
+    payload: StockMoveIn,
+    db: Session = Depends(get_session),
+):
+    grouped: dict[str, int] = {}
+    for item in payload.items:
+        product_id = str(item.product_id or '').strip()
+        if not product_id:
+            continue
+        grouped[product_id] = grouped.get(product_id, 0) + max(1, int(item.quantity or 1))
+
+    if not grouped:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No hay productos para descontar stock')
+
+    products: dict[str, Producto] = {}
+    for product_id in grouped:
+        producto = db.get(Producto, product_id)
+        if not producto:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Producto no encontrado: {product_id}')
+        products[product_id] = producto
+
+    for product_id, qty in grouped.items():
+        producto = products[product_id]
+        stock_actual = int(producto.stock or 0)
+        if stock_actual < qty:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f'Stock insuficiente para {producto.nombre}. Disponible: {stock_actual}',
+            )
+
+    for product_id, qty in grouped.items():
+        producto = products[product_id]
+        producto.stock = max(0, int(producto.stock or 0) - qty)
+        producto.updated_at = datetime.utcnow()
+
+    db.commit()
+    return {'status': 'ok', 'updated': [{'product_id': pid, 'stock': int(products[pid].stock or 0)} for pid in grouped]}
+
+
+@app.post('/internal/products/release-stock')
+def internal_liberar_stock(
+    payload: StockMoveIn,
+    db: Session = Depends(get_session),
+):
+    grouped: dict[str, int] = {}
+    for item in payload.items:
+        product_id = str(item.product_id or '').strip()
+        if not product_id:
+            continue
+        grouped[product_id] = grouped.get(product_id, 0) + max(1, int(item.quantity or 1))
+
+    if not grouped:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='No hay productos para liberar stock')
+
+    updated = []
+    for product_id, qty in grouped.items():
+        producto = db.get(Producto, product_id)
+        if not producto:
+            continue
+        producto.stock = max(0, int(producto.stock or 0) + qty)
+        producto.updated_at = datetime.utcnow()
+        updated.append({'product_id': product_id, 'stock': int(producto.stock or 0)})
+
+    db.commit()
+    return {'status': 'ok', 'updated': updated}
+
+
 @app.get('/cart')
 def obtener_carrito(
     owner_id: str | None = Query(default=None),
     db: Session = Depends(get_session),
-    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+    usuario: UsuarioApp | None = Depends(get_optional_user_from_jwt),
 ):
-    resolved_owner_id = str(owner_id or '').strip()
-    if normalize_role(usuario.role) != 'admin':
-        resolved_owner_id = usuario.usuario_id
-    elif not resolved_owner_id:
-        resolved_owner_id = usuario.usuario_id
+    resolved_owner_id = resolve_cart_owner_id(owner_id, usuario)
 
     items = db.query(CarritoItem).filter(CarritoItem.owner_id == resolved_owner_id).order_by(CarritoItem.updated_at.desc()).all()
     return {
@@ -906,13 +1024,9 @@ def agregar_carrito(
     product_id: str = Query(...),
     quantity: int = Query(default=1),
     db: Session = Depends(get_session),
-    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+    usuario: UsuarioApp | None = Depends(get_optional_user_from_jwt),
 ):
-    resolved_owner_id = str(owner_id or '').strip()
-    if normalize_role(usuario.role) != 'admin':
-        resolved_owner_id = usuario.usuario_id
-    elif not resolved_owner_id:
-        resolved_owner_id = usuario.usuario_id
+    resolved_owner_id = resolve_cart_owner_id(owner_id, usuario)
 
     item = db.query(CarritoItem).filter(CarritoItem.owner_id == resolved_owner_id, CarritoItem.product_id == product_id).first()
     qty = max(1, int(quantity))
@@ -931,13 +1045,9 @@ def actualizar_carrito(
     owner_id: str | None = Query(default=None),
     quantity: int = Query(default=1),
     db: Session = Depends(get_session),
-    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+    usuario: UsuarioApp | None = Depends(get_optional_user_from_jwt),
 ):
-    resolved_owner_id = str(owner_id or '').strip()
-    if normalize_role(usuario.role) != 'admin':
-        resolved_owner_id = usuario.usuario_id
-    elif not resolved_owner_id:
-        resolved_owner_id = usuario.usuario_id
+    resolved_owner_id = resolve_cart_owner_id(owner_id, usuario)
 
     item = db.query(CarritoItem).filter(CarritoItem.owner_id == resolved_owner_id, CarritoItem.product_id == product_id).first()
     if not item:
@@ -957,13 +1067,9 @@ def eliminar_item_carrito(
     product_id: str,
     owner_id: str | None = Query(default=None),
     db: Session = Depends(get_session),
-    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+    usuario: UsuarioApp | None = Depends(get_optional_user_from_jwt),
 ):
-    resolved_owner_id = str(owner_id or '').strip()
-    if normalize_role(usuario.role) != 'admin':
-        resolved_owner_id = usuario.usuario_id
-    elif not resolved_owner_id:
-        resolved_owner_id = usuario.usuario_id
+    resolved_owner_id = resolve_cart_owner_id(owner_id, usuario)
 
     item = db.query(CarritoItem).filter(CarritoItem.owner_id == resolved_owner_id, CarritoItem.product_id == product_id).first()
     if item:
@@ -976,13 +1082,9 @@ def eliminar_item_carrito(
 def limpiar_carrito(
     owner_id: str | None = Query(default=None),
     db: Session = Depends(get_session),
-    usuario: UsuarioApp = Depends(require_roles('buyer', 'seller', 'courier', 'admin')),
+    usuario: UsuarioApp | None = Depends(get_optional_user_from_jwt),
 ):
-    resolved_owner_id = str(owner_id or '').strip()
-    if normalize_role(usuario.role) != 'admin':
-        resolved_owner_id = usuario.usuario_id
-    elif not resolved_owner_id:
-        resolved_owner_id = usuario.usuario_id
+    resolved_owner_id = resolve_cart_owner_id(owner_id, usuario)
 
     db.query(CarritoItem).filter(CarritoItem.owner_id == resolved_owner_id).delete()
     db.commit()

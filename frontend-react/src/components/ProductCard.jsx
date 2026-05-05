@@ -40,9 +40,14 @@ export default function ProductCard({ product, onChanged }) {
     };
 
     const addCart = async () => {
-        await mercado.addProductToCart(product.id, 1);
-        session.syncState();
-        if (typeof onChanged === 'function') onChanged();
+        try {
+            await mercado.addProductToCart(product.id, 1);
+            session.syncState();
+            if (typeof onChanged === 'function') onChanged();
+            mercado.showToast('Producto agregado al carrito');
+        } catch (error) {
+            mercado.showToast(error.message || 'No se pudo agregar al carrito', 'error');
+        }
     };
 
     return (

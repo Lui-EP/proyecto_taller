@@ -73,6 +73,16 @@ function normalizeRemoteRole(role = '') {
     return 'buyer';
 }
 
+function getGuestOwnerId() {
+    if (typeof window === 'undefined') return `guest-web-${Date.now()}`;
+    const key = 'ml_guest_owner_id';
+    const existing = String(window.localStorage.getItem(key) || '').trim();
+    if (existing && existing.startsWith('guest-')) return existing;
+    const created = `guest-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    window.localStorage.setItem(key, created);
+    return created;
+}
+
 function toCategoryId(categoryValue = '', categoryLabel = '') {
     const raw = normalizeText(categoryValue || categoryLabel, 'categoria');
     return raw
@@ -256,7 +266,7 @@ function toLegacyOrder(mercado, remoteOrder = {}, productsById = new Map()) {
         id: normalizeText(remoteOrder.id),
         user_id: normalizeText(remoteOrder.customerId),
         courier_id: normalizeText(remoteOrder.courierId, ''),
-        tracking_token: '',
+        tracking_token: normalizeText(remoteOrder.guestToken, ''),
         status: mapRemoteStatusToLegacy(remoteOrder.status),
         delivery_method: deliveryMethod,
         pickup_point: deliveryMethod === 'pickup' ? {
@@ -376,8 +386,9 @@ function createMercadoLocal() {
     }
 
     function currentOwnerId() {
-        const user = requireAuthenticatedUser();
-        return normalizeText(user.id, '');
+        const user = mercado.AppState?.user || null;
+        if (user && user.id) return normalizeText(user.id, '');
+        return getGuestOwnerId();
     }
 
     async function buildRemoteProductPayload(raw = {}, existingProduct = null) {
@@ -779,7 +790,9 @@ function createMercadoLocal() {
     }
 
     mercado.OrdersAPI.create = async (data) => {
-        const currentUser = requireAuthenticatedUser();
+        const currentUser = mercado.AppState?.user || null;
+        const isGuest = !currentUser?.id;
+        const guestId = isGuest ? getGuestOwnerId() : '';
         const sourceItems = Array.isArray(data?.items) ? data.items : [];
         const items = await Promise.all(sourceItems.map(async (item) => {
             let known = cache.productsById.get(String(item.product_id)) || null;
@@ -800,8 +813,8 @@ function createMercadoLocal() {
         const payload = await fetchJson(PEDIDOS_API_URL, '/pedidos', {
             method: 'POST',
             body: JSON.stringify({
-                customerId: normalizeText(data?.customer_id, currentUser.id || ''),
-                customerName: normalizeText(data?.customer?.name, currentUser.name || 'Cliente'),
+                customerId: normalizeText(data?.customer_id, currentUser?.id || guestId),
+                customerName: normalizeText(data?.customer?.name, currentUser?.name || 'Cliente invitado'),
                 customerPhone: normalizeText(data?.customer?.phone, ''),
                 deliveryMethod: normalizeText(data?.delivery_method, 'delivery'),
                 pickupStoreId: normalizeText(data?.pickup_point?.id, ''),
@@ -821,8 +834,10 @@ function createMercadoLocal() {
         });
         return toLegacyOrder(mercado, payload?.pedido || {}, cache.productsById);
     };
-    mercado.OrdersAPI.getById = async (id) => {
-        const payload = await fetchJson(PEDIDOS_API_URL, `/pedidos/${encodeURIComponent(id)}`);
+    mercado.OrdersAPI.getById = async (id, guestToken = '') => {
+        const safeToken = normalizeText(guestToken, '');
+        const suffix = safeToken ? `?guest_token=${encodeURIComponent(safeToken)}` : '';
+        const payload = await fetchJson(PEDIDOS_API_URL, `/pedidos/${encodeURIComponent(id)}${suffix}`);
         return toLegacyOrder(mercado, payload?.pedido || {}, cache.productsById);
     };
     mercado.OrdersAPI.getMy = async () => {

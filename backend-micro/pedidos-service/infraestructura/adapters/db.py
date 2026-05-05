@@ -146,8 +146,9 @@ class PedidoApp(Base):
     courier_name = Column(String(120), nullable=True)
     courier_lat = Column(Float, nullable=True)
     courier_lng = Column(Float, nullable=True)
-    last_location_at = Column(DateTime, nullable=True)
-    note = Column(Text, nullable=True)
+    last_location_at = Column(DateTime, nullable=True)
+    guest_token = Column(String(120), nullable=True, index=True)
+    note = Column(Text, nullable=True)
     items_json = Column(Text, nullable=False)
     total = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -289,10 +290,11 @@ def ensure_pedidos_app_schema() -> None:
         "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS address_lng DOUBLE PRECISION",
         "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS address_colony VARCHAR(120)",
         "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS address_subdivision VARCHAR(120)",
-        "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS courier_lat DOUBLE PRECISION",
-        "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS courier_lng DOUBLE PRECISION",
-        "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS last_location_at TIMESTAMP",
-    ]
+        "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS courier_lat DOUBLE PRECISION",
+        "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS courier_lng DOUBLE PRECISION",
+        "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS last_location_at TIMESTAMP",
+        "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS guest_token VARCHAR(120)",
+    ]
 
     with engine.begin() as conn:
         for statement in statements:
