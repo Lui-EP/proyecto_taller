@@ -136,10 +136,50 @@ function buildFallbackSeller(remoteProduct = {}) {
     };
 }
 
+function normalizeRemoteReview(remoteReview = {}, index = 0) {
+    return {
+        id: normalizeText(remoteReview.id, `r-${Date.now()}-${index}`),
+        product_id: normalizeText(remoteReview.product_id, ''),
+        user_id: normalizeText(remoteReview.user_id, ''),
+        user_name: normalizeText(remoteReview.user_name, 'Usuario'),
+        rating: Math.max(1, Math.min(5, Math.round(toSafeNumber(remoteReview.rating, 5)))),
+        comment: normalizeText(remoteReview.comment, ''),
+        created_at: normalizeText(remoteReview.created_at, new Date().toISOString()),
+    };
+}
+
+function normalizeRemoteSellerFromProduct(remoteProduct = {}) {
+    const seller = remoteProduct?.seller || {};
+    if (!seller || typeof seller !== 'object') {
+        return buildFallbackSeller(remoteProduct);
+    }
+    const fallback = buildFallbackSeller(remoteProduct);
+    return {
+        id: normalizeText(seller.id, fallback.id),
+        name: normalizeText(seller.name, fallback.name),
+        status: normalizeText(seller.status, fallback.status),
+        seller_profile: {
+            business_name: normalizeText(seller?.seller_profile?.business_name, fallback.seller_profile.business_name),
+            description: normalizeText(seller?.seller_profile?.description, ''),
+            schedule: normalizeText(seller?.seller_profile?.schedule, ''),
+            location: normalizeText(seller?.seller_profile?.location, fallback.seller_profile.location),
+            phone: normalizeText(seller?.seller_profile?.phone, ''),
+            curp: normalizeText(seller?.seller_profile?.curp, ''),
+        },
+        average_rating: toSafeNumber(seller.average_rating, fallback.average_rating),
+        total_products: toSafeNumber(seller.total_products, fallback.total_products),
+        total_reviews: toSafeNumber(seller.total_reviews, fallback.total_reviews),
+    };
+}
+
 function normalizeRemoteProduct(mercado, remoteProduct = {}) {
     const categoryId = toCategoryId(remoteProduct.category, remoteProduct.categoryLabel);
     const categoryName = normalizeText(remoteProduct.categoryLabel, remoteProduct.category || 'Catalogo');
     const image = resolveProductImage(remoteProduct.imageKey, remoteProduct.imageData);
+    const reviews = Array.isArray(remoteProduct.reviews)
+        ? remoteProduct.reviews.map((item, index) => normalizeRemoteReview(item, index))
+        : [];
+
     return {
         id: normalizeText(remoteProduct.id),
         seller_id: normalizeText(remoteProduct.sellerId, 'vendedor-1'),
@@ -158,8 +198,8 @@ function normalizeRemoteProduct(mercado, remoteProduct = {}) {
         updated_at: remoteProduct.updatedAt || new Date().toISOString(),
         category: { id: categoryId, name: categoryName },
         seller_name: normalizeText(remoteProduct.sellerName, 'Vendedor local'),
-        seller: buildFallbackSeller(remoteProduct),
-        reviews: [],
+        seller: normalizeRemoteSellerFromProduct(remoteProduct),
+        reviews,
         average_rating: Number(toSafeNumber(remoteProduct.rating, 0).toFixed(1)),
         favorites_count: toSafeNumber(remoteProduct.favoritesCount, 0),
         availability: toSafeNumber(remoteProduct.stock, 0) > 10 ? 'available' : toSafeNumber(remoteProduct.stock, 0) > 0 ? 'low' : 'unavailable',
@@ -542,18 +582,24 @@ function createMercadoLocal() {
 
     mercado.SellersAPI.getMetrics = async () => {
         const sellerId = normalizeText(mercado.AppState?.user?.id, '');
-        const [productResult, sellerOrders] = await Promise.all([
+        const [metricsPayload, productResult, sellerOrders] = await Promise.all([
+            fetchJson(CLIENTES_API_URL, `/seller/metrics?seller_id=${encodeURIComponent(sellerId)}`),
             mercado.ProductsAPI.getAll({ seller_id: sellerId }),
             mercado.OrdersAPI.getSellerOrders(),
         ]);
+        const baseMetrics = metricsPayload?.metrics || {};
         const products = productResult?.products || [];
         const orders = Array.isArray(sellerOrders) ? sellerOrders : [];
         return {
-            total_products: products.length,
-            total_orders: orders.length,
-            total_sales: orders.reduce((sum, order) => sum + toSafeNumber(order.total, 0), 0),
+            total_products: toSafeNumber(baseMetrics.total_products, products.length),
+            total_orders: toSafeNumber(baseMetrics.total_orders, orders.length),
+            total_sales: toSafeNumber(baseMetrics.total_sales, orders.reduce((sum, order) => sum + toSafeNumber(order.total, 0), 0)),
+            average_rating: toSafeNumber(baseMetrics.average_rating, 0),
+            total_reviews: toSafeNumber(baseMetrics.total_reviews, 0),
             low_stock_products: products.filter((product) => toSafeNumber(product.stock, 0) <= 10).length,
             active_cart_count: 0,
+            total_views: products.reduce((sum, product) => sum + toSafeNumber(product.views, 0), 0),
+            total_favorites: products.reduce((sum, product) => sum + toSafeNumber(product.favorites_count, 0), 0),
         };
     };
 
