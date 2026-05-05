@@ -88,12 +88,18 @@ function statusTone(status) {
     return 'bad';
 }
 
-function toReasonText(reason) {
+function toReasonText(reason, targetType = '') {
     if (!reason) return 'Reporte';
     const safe = String(reason).toLowerCase();
     if (safe === 'spam') return 'Spam';
     if (safe === 'fake') return 'Informacion falsa';
     if (safe === 'offensive') return 'Contenido ofensivo';
+    if (safe === 'inappropriate') {
+        const safeTarget = String(targetType || '').toLowerCase();
+        if (safeTarget === 'review') return 'Comentario inapropiado';
+        if (safeTarget === 'product') return 'Producto inapropiado';
+        return 'Contenido inapropiado';
+    }
     if (safe === 'feature_request') return 'Solicitud para destacar';
     if (safe === 'other') return 'Otro';
     return reason;
@@ -162,7 +168,7 @@ function AdminSelect({ value, options, onChange, ariaLabel = 'Seleccionar opcion
                 onClick={() => setOpen((prev) => !prev)}
             >
                 <span>{selected.label}</span>
-                <span className="adminx-selectbox-arrow" aria-hidden="true">â–¾</span>
+                <span className="adminx-selectbox-arrow" aria-hidden="true" />
             </button>
             {open ? (
                 <div className="adminx-selectbox-menu" role="listbox" aria-label={ariaLabel}>
@@ -1031,7 +1037,7 @@ export default function AdminPage() {
                                                 <StatusPill value={report.status} />
                                                 <span className="badge badge-terracotta">{report.target_type === 'product' ? 'Producto' : (report.target_type || 'General')}</span>
                                             </div>
-                                            <h3>{toReasonText(report.reason)}</h3>
+                                            <h3>{toReasonText(report.reason, report.target_type)}</h3>
                                             <p className="adminx-subtext">Reportado por: {report.reporter_name || 'Usuario'}</p>
                                         </div>
                                         <p className="adminx-subtext">{mercado.formatDate(report.created_at)}</p>

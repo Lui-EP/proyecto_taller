@@ -267,14 +267,18 @@
 }
 
 .adminx-selectbox-arrow {
-    font-size: 1rem;
-    line-height: 1;
-    color: #8b5f27;
+    width: 0.58rem;
+    height: 0.58rem;
+    border-right: 2px solid #8b5f27;
+    border-bottom: 2px solid #8b5f27;
+    transform: rotate(45deg);
+    transform-origin: center;
     transition: transform 0.18s ease;
+    margin-right: 0.06rem;
 }
 
 .adminx-selectbox.is-open .adminx-selectbox-arrow {
-    transform: rotate(180deg);
+    transform: rotate(-135deg);
 }
 
 .adminx-selectbox-menu {
