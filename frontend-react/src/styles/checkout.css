@@ -73,6 +73,11 @@
     border-bottom: 0;
 }
 
+.checkout-item.is-not-from-store {
+    opacity: 0.46;
+    filter: grayscale(0.85);
+}
+
 .checkout-item img {
     width: 90px;
     height: 90px;
@@ -100,6 +105,14 @@
 
 .stock-note {
     margin-top: 0.2rem;
+}
+
+.pickup-mismatch-note {
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+    color: #8f5d2d;
+    font-size: 0.8rem;
+    font-weight: 700;
 }
 
 .checkout-item-actions {
@@ -320,6 +333,12 @@
     margin: 0.25rem 0 0.7rem;
     font-size: 0.82rem;
     color: var(--charcoal-muted);
+}
+
+.pickup-warning-note {
+    color: #8f5d2d;
+    font-weight: 700;
+    margin-top: 0.15rem;
 }
 
 .delivery-method-row {

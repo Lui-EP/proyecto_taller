@@ -1157,7 +1157,6 @@ export default function CheckoutPage() {
         }
     }, []);
 
-    const subtotal = items.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
     const isPickup = deliveryMethod === 'pickup';
 
     const pickupPoints = useMemo(() => {
@@ -1201,6 +1200,36 @@ export default function CheckoutPage() {
     const selectedPickupPoint = useMemo(
         () => pickupPoints.find((point) => point.id === pickupSellerId) || pickupPoints[0] || null,
         [pickupPoints, pickupSellerId]
+    );
+
+    const selectedPickupSellerId = String(selectedPickupPoint?.id || '').trim();
+
+    const getItemSellerId = useCallback((item) => String(
+        item?.product?.seller?.id
+        || item?.product?.seller_id
+        || item?.product?.sellerId
+        || ''
+    ).trim(), []);
+
+    const itemMatchesPickupStore = useCallback((item) => {
+        if (!isPickup) return true;
+        if (!selectedPickupSellerId) return false;
+        return getItemSellerId(item) === selectedPickupSellerId;
+    }, [getItemSellerId, isPickup, selectedPickupSellerId]);
+
+    const checkoutItems = useMemo(
+        () => items.filter((item) => itemMatchesPickupStore(item)),
+        [items, itemMatchesPickupStore]
+    );
+
+    const incompatiblePickupCount = useMemo(
+        () => isPickup ? Math.max(0, items.length - checkoutItems.length) : 0,
+        [checkoutItems.length, isPickup, items.length]
+    );
+
+    const checkoutSubtotal = useMemo(
+        () => checkoutItems.reduce((sum, item) => sum + Number(item.subtotal || 0), 0),
+        [checkoutItems]
     );
 
     const requestCustomerLocation = () => {
@@ -1260,7 +1289,10 @@ export default function CheckoutPage() {
 
     const submitOrder = async (event) => {
         event.preventDefault();
-        if (!items.length) {
+        const activeItems = isPickup ? checkoutItems : items;
+        const activeSubtotal = activeItems.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
+
+        if (!activeItems.length) {
             mercado.showToast('Tu carrito esta vacio', 'error');
             return;
         }
@@ -1273,6 +1305,10 @@ export default function CheckoutPage() {
         }
         if (isPickup && !selectedPickupPoint) {
             mercado.showToast('Selecciona una tienda para recoger', 'error');
+            return;
+        }
+        if (isPickup && incompatiblePickupCount > 0 && !activeItems.length) {
+            mercado.showToast('No hay productos de la tienda seleccionada para recoger', 'error');
             return;
         }
 
@@ -1299,14 +1335,14 @@ export default function CheckoutPage() {
                 location: !isPickup && customerLocation ? { ...customerLocation } : undefined,
                 delivery_method: isPickup ? 'pickup' : 'delivery',
                 pickup_point: isPickup && selectedPickupPoint ? { ...selectedPickupPoint } : undefined,
-                items: items.map((item) => ({
+                items: activeItems.map((item) => ({
                     product_id: item.product.id,
                     name: item.product.name,
                     quantity: Number(item.quantity || 1),
                     price: Number(item.product.price || 0),
                     image: item.product.images?.[0] || '',
                 })),
-                total: subtotal,
+                total: activeSubtotal,
             });
 
             await mercado.clearCart();
@@ -1350,7 +1386,10 @@ export default function CheckoutPage() {
                         </div>
                     ) : (
                         items.map((item) => (
-                            <article key={item.product.id} className="checkout-item">
+                            <article
+                                key={item.product.id}
+                                className={`checkout-item ${isPickup && !itemMatchesPickupStore(item) ? 'is-not-from-store' : ''}`}
+                            >
                                 <SafeImage
                                     src={resolveImageSrc(item.product.images?.[0], mercado.createPlaceholderImage(item.product.name))}
                                     alt={item.product.name}
@@ -1361,6 +1400,9 @@ export default function CheckoutPage() {
                                     <h3>{item.product.name}</h3>
                                     <p>{mercado.formatPrice(item.product.price)} c/u</p>
                                     <p className="stock-note">Stock disponible: {item.product.stock || 0}</p>
+                                    {isPickup && !itemMatchesPickupStore(item) ? (
+                                        <p className="pickup-mismatch-note">Estos productos no son de esta tienda.</p>
+                                    ) : null}
                                     <div className="checkout-item-actions">
                                         <button type="button" onClick={() => changeQty(item.product.id, -1)}>-</button>
                                         <span>{item.quantity}</span>
@@ -1376,12 +1418,12 @@ export default function CheckoutPage() {
 
                 <aside className="checkout-summary">
                     <h2>Resumen</h2>
-                    <div className="summary-row"><span>Subtotal</span><strong>{mercado.formatPrice(subtotal)}</strong></div>
+                    <div className="summary-row"><span>Subtotal</span><strong>{mercado.formatPrice(checkoutSubtotal)}</strong></div>
                     <div className="summary-row">
                         <span>{isPickup ? 'Recogida' : 'Envio'}</span>
                         <strong>{isPickup ? 'Recoges en tienda' : 'Coordinado con vendedor'}</strong>
                     </div>
-                    <div className="summary-row total"><span>Total</span><strong>{mercado.formatPrice(subtotal)}</strong></div>
+                    <div className="summary-row total"><span>Total</span><strong>{mercado.formatPrice(checkoutSubtotal)}</strong></div>
 
                     <form className="checkout-form" onSubmit={submitOrder}>
                         <label className="form-label">Nombre completo</label>
@@ -1437,6 +1479,11 @@ export default function CheckoutPage() {
                                 <p className="checkout-note">
                                     Dirección de recogida: <strong>{selectedPickupPoint?.location || 'Ubicación por confirmar'}</strong>
                                 </p>
+                                {incompatiblePickupCount > 0 ? (
+                                    <p className="checkout-note pickup-warning-note">
+                                        {incompatiblePickupCount} producto(s) no pertenecen a esta tienda y quedan fuera de la recogida.
+                                    </p>
+                                ) : null}
                                 <p className="checkout-note">
                                     Se aparta tu producto por 2 horas. Si no pasas a recoger, la tienda puede liberar el apartado.
                                 </p>
@@ -1530,7 +1577,7 @@ export default function CheckoutPage() {
                             </>
                         )}
 
-                        <button className="btn btn-primary w-full" type="submit" disabled={submitting || !items.length}>
+                        <button className="btn btn-primary w-full" type="submit" disabled={submitting || !checkoutItems.length}>
                             {submitting ? 'Confirmando...' : 'Confirmar compra'}
                         </button>
                     </form>
