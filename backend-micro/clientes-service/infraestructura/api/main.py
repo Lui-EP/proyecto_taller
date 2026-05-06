@@ -339,6 +339,46 @@ def migrate_user_id_prefixes(db: Session) -> int:
     return updated
 
 
+def normalize_existing_catalog_texts(db: Session) -> int:
+    updated = 0
+
+    productos = db.query(Producto).all()
+    for producto in productos:
+        seller = db.get(UsuarioApp, producto.seller_id)
+        normalized_name = capitalize_words(producto.nombre)
+        normalized_seller_name = capitalize_words(seller.nombre if seller and seller.nombre else producto.seller_name)
+        normalized_category_label = capitalize_words(producto.categoria_label or producto.categoria)
+        normalized_description = capitalize_sentence(producto.descripcion)
+
+        if normalized_name and normalized_name != (producto.nombre or ''):
+            producto.nombre = normalized_name
+            updated += 1
+        if normalized_seller_name and normalized_seller_name != (producto.seller_name or ''):
+            producto.seller_name = normalized_seller_name
+            updated += 1
+        if normalized_category_label and normalized_category_label != (producto.categoria_label or ''):
+            producto.categoria_label = normalized_category_label
+            updated += 1
+        if normalized_description and normalized_description != (producto.descripcion or ''):
+            producto.descripcion = normalized_description
+            updated += 1
+
+    categorias = db.query(Categoria).all()
+    for categoria in categorias:
+        normalized_category_name = capitalize_words(categoria.nombre)
+        normalized_category_description = capitalize_sentence(categoria.descripcion)
+        if normalized_category_name and normalized_category_name != (categoria.nombre or ''):
+            categoria.nombre = normalized_category_name
+            updated += 1
+        if normalized_category_description and normalized_category_description != (categoria.descripcion or ''):
+            categoria.descripcion = normalized_category_description
+            updated += 1
+
+    if updated:
+        db.commit()
+    return updated
+
+
 def issue_access_token(usuario: UsuarioApp) -> str:
     ensure_jwt_configured()
     now = datetime.now(timezone.utc)
@@ -581,6 +621,7 @@ def on_startup():
     try:
         migrate_user_id_prefixes(db)
         migrate_plaintext_passwords(db)
+        normalize_existing_catalog_texts(db)
     finally:
         db.close()
 
