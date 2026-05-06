@@ -85,6 +85,7 @@ export default function SellerDashboardPage() {
 
     const [currentProductImages, setCurrentProductImages] = useState([]);
     const [selectedImageFiles, setSelectedImageFiles] = useState([]);
+    const [selectedImagePreviews, setSelectedImagePreviews] = useState([]);
     const [savingProduct, setSavingProduct] = useState(false);
     const [isTrackingOnly, setIsTrackingOnly] = useState(false);
 
@@ -248,6 +249,10 @@ export default function SellerDashboardPage() {
         }
 
         setSelectedImageFiles([]);
+        setSelectedImagePreviews((prev) => {
+            prev.forEach((url) => URL.revokeObjectURL(url));
+            return [];
+        });
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -269,6 +274,10 @@ export default function SellerDashboardPage() {
     const onFilesChange = (event) => {
         const files = Array.from(event.target.files || []);
         setSelectedImageFiles(files);
+        setSelectedImagePreviews((prev) => {
+            prev.forEach((url) => URL.revokeObjectURL(url));
+            return files.map((file) => URL.createObjectURL(file));
+        });
     };
 
     const fileToDataUrl = (file) =>
@@ -328,6 +337,10 @@ export default function SellerDashboardPage() {
             setProductForm(EMPTY_PRODUCT_FORM);
             setCurrentProductImages([]);
             setSelectedImageFiles([]);
+            setSelectedImagePreviews((prev) => {
+                prev.forEach((url) => URL.revokeObjectURL(url));
+                return [];
+            });
             await loadData();
         } catch (error) {
             mercado.showToast(error.message || 'Error al guardar producto', 'error');
@@ -505,6 +518,10 @@ export default function SellerDashboardPage() {
 
         return '';
     }, [selectedImageFiles, currentProductImages]);
+
+    useEffect(() => () => {
+        selectedImagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    }, [selectedImagePreviews]);
 
     if (loading) {
         return <PageLoader text="Cargando panel vendedor..." />;
@@ -994,6 +1011,15 @@ export default function SellerDashboardPage() {
                                     <small className="product-images-help">Para publicar un producto nuevo, la imagen es obligatoria.</small>
                                 ) : null}
                                 <div className="selected-images-preview">{selectedImagesText}</div>
+                                {selectedImagePreviews.length ? (
+                                    <div className="image-upload selected-image-grid">
+                                        {selectedImagePreviews.map((previewUrl, index) => (
+                                            <div className="image-preview" key={`${previewUrl}-${index}`}>
+                                                <img src={previewUrl} alt={`Vista previa ${index + 1}`} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : null}
                             </div>
 
                             <div className="local-handmade-option">

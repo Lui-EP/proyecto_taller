@@ -285,6 +285,9 @@ function toLegacyOrder(mercado, remoteOrder = {}, productsById = new Map()) {
             address: addressLabel,
         },
         items,
+        subtotal: toSafeNumber(remoteOrder.subtotal, 0),
+        shipping_fee: toSafeNumber(remoteOrder.shippingFee, 0),
+        delivery_distance_km: toSafeNumber(remoteOrder.deliveryDistanceKm, 0),
         total: toSafeNumber(remoteOrder.total, 0),
         location: Number.isFinite(Number(remoteOrder.courierLat)) && Number.isFinite(Number(remoteOrder.courierLng))
             ? { lat: Number(remoteOrder.courierLat), lng: Number(remoteOrder.courierLng) }
@@ -829,6 +832,9 @@ function createMercadoLocal() {
                 addressSubdivision: normalizeText(data?.address_subdivision, ''),
                 note: normalizeText(data?.note, ''),
                 items,
+                subtotal: Math.max(0, toSafeNumber(data?.subtotal, items.reduce((sum, item) => sum + item.subtotal, 0))),
+                deliveryDistanceKm: Math.max(0, toSafeNumber(data?.delivery_distance_km, 0)),
+                shippingFee: Math.max(0, toSafeNumber(data?.shipping_fee, 0)),
                 total: Math.max(1, toSafeNumber(data?.total, items.reduce((sum, item) => sum + item.subtotal, 0))),
             }),
         });

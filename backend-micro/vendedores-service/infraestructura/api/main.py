@@ -101,6 +101,31 @@ def ensure_seller_or_admin_scope(target_seller_id: str, claims: dict) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para este vendedor')
 
 
+def normalize_spaces(value: str | None) -> str:
+    return ' '.join(str(value or '').strip().split())
+
+
+def capitalize_words(value: str | None) -> str:
+    safe = normalize_spaces(value)
+    if not safe:
+        return ''
+    return ' '.join(part[:1].upper() + part[1:].lower() for part in safe.split(' '))
+
+
+def capitalize_sentence(value: str | None) -> str:
+    safe = normalize_spaces(value)
+    if not safe:
+        return ''
+    return safe[:1].upper() + safe[1:]
+
+
+def format_phone_with_hyphens(value: str | None) -> str:
+    digits = ''.join(ch for ch in str(value or '') if ch.isdigit())
+    if len(digits) == 10:
+        return f'{digits[:3]}-{digits[3:6]}-{digits[6:]}'
+    return normalize_spaces(value)
+
+
 def serialize_vendedor(item: Vendedor) -> dict:
     return {
         'id': item.vendedor_id,
@@ -168,12 +193,12 @@ def crear_vendedor(
     sid = f"vendedor-{int(datetime.utcnow().timestamp())}"
     row = Vendedor(
         vendedor_id=sid,
-        nombre=payload.nombre.strip(),
+        nombre=capitalize_words(payload.nombre),
         email=payload.email.strip().lower(),
-        telefono=(payload.telefono or '').strip(),
-        ubicacion=(payload.ubicacion or '').strip(),
+        telefono=format_phone_with_hyphens(payload.telefono),
+        ubicacion=capitalize_sentence(payload.ubicacion),
         curp=(payload.curp or '').strip(),
-        negocio=payload.negocio.strip(),
+        negocio=capitalize_words(payload.negocio),
         descripcion='',
         horario='',
         verificado=True,
@@ -199,11 +224,11 @@ def actualizar_perfil(
     row = db.get(Vendedor, vendedor_id)
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Vendedor no encontrado')
-    row.descripcion = (payload.descripcion or '').strip()
-    row.horario = (payload.horario or '').strip()
-    row.telefono = (payload.telefono or '').strip()
-    row.ubicacion = (payload.ubicacion or '').strip()
-    row.curp = (payload.curp or '').strip()
+    row.descripcion = capitalize_sentence(payload.descripcion or '')
+    row.horario = normalize_spaces(payload.horario or '')
+    row.telefono = format_phone_with_hyphens(payload.telefono or '')
+    row.ubicacion = capitalize_sentence(payload.ubicacion or '')
+    row.curp = (payload.curp or '').strip().upper()
     row.updated_at = datetime.utcnow()
     db.commit()
     return {'status': 'ok', 'seller': serialize_vendedor(row)}

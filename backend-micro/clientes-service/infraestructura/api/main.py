@@ -171,6 +171,31 @@ def role_id_prefix(role: str) -> str:
     return ROLE_ID_PREFIX.get(normalize_role(role), 'comprador')
 
 
+def normalize_spaces(value: str | None) -> str:
+    return ' '.join(str(value or '').strip().split())
+
+
+def capitalize_words(value: str | None) -> str:
+    safe = normalize_spaces(value)
+    if not safe:
+        return ''
+    return ' '.join(part[:1].upper() + part[1:].lower() for part in safe.split(' '))
+
+
+def capitalize_sentence(value: str | None) -> str:
+    safe = normalize_spaces(value)
+    if not safe:
+        return ''
+    return safe[:1].upper() + safe[1:]
+
+
+def format_phone_with_hyphens(value: str | None) -> str:
+    digits = ''.join(ch for ch in str(value or '') if ch.isdigit())
+    if len(digits) == 10:
+        return f'{digits[:3]}-{digits[3:6]}-{digits[6:]}'
+    return normalize_spaces(value)
+
+
 def _build_auth_headers(token: str | None = None) -> dict[str, str]:
     headers = {'Accept': 'application/json'}
     safe_token = str(token or '').strip()
@@ -574,10 +599,10 @@ def health():
 def crear_cliente(payload: ClienteIn, db: Session = Depends(get_session)):
     result = registrar_cliente(
         db=db,
-        nombre=payload.nombre,
+        nombre=capitalize_words(payload.nombre),
         email=payload.email,
-        telefono=payload.telefono,
-        direccion=payload.direccion,
+        telefono=format_phone_with_hyphens(payload.telefono),
+        direccion=capitalize_sentence(payload.direccion),
     )
     if not result['ok']:
         raise HTTPException(status_code=result['status_code'], detail=result['message'])
@@ -676,12 +701,12 @@ def register_app(payload: RegisterIn, db: Session = Depends(get_session)):
     role = normalize_role(payload.role)
     user = UsuarioApp(
         usuario_id=f'{role_id_prefix(role)}-{uuid4().hex[:8]}',
-        nombre=payload.name.strip(),
+        nombre=capitalize_words(payload.name),
         email=payload.email.strip().lower(),
         password=hash_password(payload.password),
         role=role,
-        telefono=(payload.phone or '').strip(),
-        direccion=(payload.location or '').strip(),
+        telefono=format_phone_with_hyphens(payload.phone),
+        direccion=capitalize_sentence(payload.location),
         activo=True,
         created_at=datetime.utcnow(),
     )
@@ -739,15 +764,16 @@ def listar_categorias(db: Session = Depends(get_session)):
 
 @app.post('/categorias')
 def crear_categoria(payload: CategoriaIn, db: Session = Depends(get_session)):
-    category_id = slugify_category(payload.name)
+    normalized_name = capitalize_words(payload.name)
+    category_id = slugify_category(normalized_name)
     existing = db.get(Categoria, category_id)
     if existing:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='La categoria ya existe')
     category = Categoria(
         categoria_id=category_id,
-        nombre=payload.name.strip(),
-        descripcion=(payload.description or '').strip(),
-        metafora=(payload.metafora or '').strip() or infer_metafora_categoria(payload.name),
+        nombre=normalized_name,
+        descripcion=capitalize_sentence(payload.description),
+        metafora=(payload.metafora or '').strip() or infer_metafora_categoria(normalized_name),
         status='pending',
         created_at=datetime.utcnow(),
     )
@@ -834,16 +860,21 @@ def crear_producto(
     usuario: UsuarioApp = Depends(require_roles('seller', 'admin')),
 ):
     ensure_seller_or_admin_scope(payload.seller_id, usuario)
+    normalized_name = capitalize_words(payload.name)
+    normalized_category = slugify_category(payload.category)
+    normalized_category_label = capitalize_words(payload.category_label or payload.category)
+    normalized_description = capitalize_sentence(payload.description)
+    normalized_seller_name = capitalize_words(payload.seller_name)
     producto = Producto(
         producto_id=f'pn-{uuid4().hex[:10]}',
         seller_id=payload.seller_id,
-        seller_name=payload.seller_name,
-        nombre=payload.name,
-        categoria=payload.category,
-        categoria_label=payload.category_label,
+        seller_name=normalized_seller_name,
+        nombre=normalized_name,
+        categoria=normalized_category,
+        categoria_label=normalized_category_label,
         precio=payload.price,
         stock=payload.stock,
-        descripcion=payload.description,
+        descripcion=normalized_description,
         featured=payload.featured,
         local=payload.local,
         verified=payload.verified,
@@ -874,6 +905,16 @@ def actualizar_producto(
     ensure_seller_or_admin_scope(producto.seller_id, usuario)
 
     data = payload.model_dump(exclude_unset=True)
+    if 'seller_name' in data:
+        data['seller_name'] = capitalize_words(data['seller_name'])
+    if 'name' in data:
+        data['name'] = capitalize_words(data['name'])
+    if 'category' in data:
+        data['category'] = slugify_category(data['category'])
+    if 'category_label' in data:
+        data['category_label'] = capitalize_words(data['category_label'])
+    if 'description' in data:
+        data['description'] = capitalize_sentence(data['description'])
     field_map = {
         'seller_name': 'seller_name',
         'name': 'nombre',
@@ -1404,16 +1445,16 @@ def actualizar_profile_seller(
     if not profile:
         profile = SellerProfile(seller_id=seller_id, updated_at=datetime.utcnow())
         db.add(profile)
-    profile.business_name = payload.business_name
-    profile.description = payload.description or ''
-    profile.schedule = payload.schedule or ''
-    profile.location = payload.location or ''
-    profile.phone = payload.phone or ''
-    profile.curp = payload.curp or ''
+    profile.business_name = capitalize_words(payload.business_name)
+    profile.description = capitalize_sentence(payload.description or '')
+    profile.schedule = normalize_spaces(payload.schedule or '')
+    profile.location = capitalize_sentence(payload.location or '')
+    profile.phone = format_phone_with_hyphens(payload.phone or '')
+    profile.curp = (payload.curp or '').strip().upper()
     profile.updated_at = datetime.utcnow()
-    user.nombre = payload.business_name or user.nombre
-    user.telefono = payload.phone or user.telefono
-    user.direccion = payload.location or user.direccion
+    user.nombre = profile.business_name or user.nombre
+    user.telefono = profile.phone or user.telefono
+    user.direccion = profile.location or user.direccion
     db.commit()
     return {'status': 'ok', 'profile': serialize_profile(profile)}
 

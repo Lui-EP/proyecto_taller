@@ -99,6 +99,24 @@ def ensure_courier_or_admin_scope(target_courier_id: str, claims: dict) -> None:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='No autorizado para este repartidor')
 
 
+def normalize_spaces(value: str | None) -> str:
+    return ' '.join(str(value or '').strip().split())
+
+
+def capitalize_words(value: str | None) -> str:
+    safe = normalize_spaces(value)
+    if not safe:
+        return ''
+    return ' '.join(part[:1].upper() + part[1:].lower() for part in safe.split(' '))
+
+
+def format_phone_with_hyphens(value: str | None) -> str:
+    digits = ''.join(ch for ch in str(value or '') if ch.isdigit())
+    if len(digits) == 10:
+        return f'{digits[:3]}-{digits[3:6]}-{digits[6:]}'
+    return normalize_spaces(value)
+
+
 def serialize_repartidor(item: Repartidor) -> dict:
     return {
         'id': item.repartidor_id,
@@ -177,9 +195,9 @@ def crear_repartidor(
     rid = f"repartidor-{int(datetime.utcnow().timestamp())}"
     row = Repartidor(
         repartidor_id=rid,
-        nombre=payload.nombre.strip(),
+        nombre=capitalize_words(payload.nombre),
         email=payload.email.strip().lower(),
-        telefono=(payload.telefono or '').strip(),
+        telefono=format_phone_with_hyphens(payload.telefono),
         activo=True,
         estado='disponible',
         updated_at=datetime.utcnow(),

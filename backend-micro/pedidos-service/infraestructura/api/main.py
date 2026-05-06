@@ -20,6 +20,8 @@ JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', '').strip()
 JWT_ALGORITHM = os.getenv('JWT_ALGORITHM', 'HS256').strip()
 COURIER_ACTIVE_STATUSES = {'pedido_realizado', 'asignado', 'en_transito', 'listo_recoger'}
 CLIENTES_SERVICE_URL = os.getenv('CLIENTES_SERVICE_URL', 'http://127.0.0.1:8001').strip().rstrip('/')
+DELIVERY_BASE_FEE = float(os.getenv('DELIVERY_BASE_FEE', '10'))
+DELIVERY_FEE_PER_KM = float(os.getenv('DELIVERY_FEE_PER_KM', '5'))
 
 app.add_middleware(
     CORSMiddleware,
@@ -58,6 +60,9 @@ class PedidoIn(BaseModel):
     addressSubdivision: str | None = Field(default='')
     note: str | None = None
     items: list[OrderItemIn] = Field(min_length=1)
+    subtotal: float | None = Field(default=0, ge=0)
+    deliveryDistanceKm: float | None = Field(default=0, ge=0)
+    shippingFee: float | None = Field(default=0, ge=0)
     total: float = Field(gt=0)
 
 
@@ -150,6 +155,13 @@ def release_remote_stock(items: list[dict]) -> None:
         return
 
 
+def format_phone_with_hyphens(value: str | None) -> str:
+    digits = ''.join(ch for ch in str(value or '') if ch.isdigit())
+    if len(digits) == 10:
+        return f'{digits[:3]}-{digits[3:6]}-{digits[6:]}'
+    return str(value or '').strip()
+
+
 @app.on_event('startup')
 def on_startup():
     init_db()
@@ -193,13 +205,17 @@ def registrar_pedido(
         for item in payload.items
     ]
     consume_remote_stock(stock_items)
+    subtotal = round(sum(float(item.subtotal or (item.price * item.quantity)) for item in payload.items), 2)
+    delivery_distance_km = round(float(payload.deliveryDistanceKm or 0), 2) if delivery_method == 'delivery' else 0.0
+    shipping_fee = round(DELIVERY_BASE_FEE + (DELIVERY_FEE_PER_KM * delivery_distance_km), 2) if delivery_method == 'delivery' else 0.0
+    total_amount = round(subtotal + shipping_fee, 2)
 
     guest_token = uuid4().hex if is_guest_order else ''
     pedido = PedidoApp(
         pedido_uid=f'o-{uuid4().hex[:12]}',
         customer_id=payload.customerId,
         customer_name=payload.customerName.strip(),
-        customer_phone=payload.customerPhone.strip(),
+        customer_phone=format_phone_with_hyphens(payload.customerPhone),
         delivery_method=delivery_method,
         pickup_store_id=(payload.pickupStoreId or '').strip(),
         pickup_store_name=(payload.pickupStoreName or '').strip(),
@@ -220,7 +236,10 @@ def registrar_pedido(
         guest_token=guest_token or None,
         note=(payload.note or '').strip(),
         items_json=json.dumps([item.model_dump() for item in payload.items], ensure_ascii=False),
-        total=payload.total,
+        subtotal=subtotal,
+        shipping_fee=shipping_fee,
+        delivery_distance_km=delivery_distance_km,
+        total=total_amount,
         created_at=now,
         updated_at=now,
     )
@@ -437,6 +456,13 @@ def serialize_pedido(pedido: PedidoApp) -> dict:
         'guestToken': pedido.guest_token or '',
         'note': pedido.note or '',
         'items': items,
+        'subtotal': float(pedido.subtotal or 0),
+        'shippingFee': float(pedido.shipping_fee or 0),
+        'deliveryDistanceKm': float(pedido.delivery_distance_km or 0),
+        'shippingRule': {
+            'base': DELIVERY_BASE_FEE,
+            'perKm': DELIVERY_FEE_PER_KM,
+        },
         'total': pedido.total,
         'createdAt': pedido.created_at.isoformat() if pedido.created_at else '',
         'updatedAt': pedido.updated_at.isoformat() if pedido.updated_at else '',

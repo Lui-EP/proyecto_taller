@@ -9,6 +9,8 @@ import SafeImage from '../components/SafeImage';
 
 const CHIAPAS_VIEWBOX = '-94.600000,17.950000,-90.200000,14.450000';
 const DEFAULT_LOCATION = { lat: 16.749, lng: -93.116 };
+const DELIVERY_BASE_FEE = 10;
+const DELIVERY_FEE_PER_KM = 5;
 const LOCATIONIQ_BASE_URL = 'https://us1.locationiq.com/v1';
 const LOCAL_CHIAPAS_CITY_CENTERS = [
     {
@@ -1119,6 +1121,30 @@ export default function CheckoutPage() {
         [checkoutItems]
     );
 
+    const estimatedDeliveryDistanceKm = useMemo(() => {
+        if (deliveryMethod !== 'delivery') return 0;
+        if (!customerLocation || !Number.isFinite(Number(customerLocation.lat)) || !Number.isFinite(Number(customerLocation.lng))) return 0;
+        const lat1 = (DEFAULT_LOCATION.lat * Math.PI) / 180;
+        const lng1 = (DEFAULT_LOCATION.lng * Math.PI) / 180;
+        const lat2 = (Number(customerLocation.lat) * Math.PI) / 180;
+        const lng2 = (Number(customerLocation.lng) * Math.PI) / 180;
+        const dLat = lat2 - lat1;
+        const dLng = lng2 - lng1;
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return Number((6371 * c).toFixed(2));
+    }, [customerLocation, deliveryMethod]);
+
+    const shippingFee = useMemo(() => {
+        if (deliveryMethod !== 'delivery') return 0;
+        return Number((DELIVERY_BASE_FEE + (DELIVERY_FEE_PER_KM * estimatedDeliveryDistanceKm)).toFixed(2));
+    }, [deliveryMethod, estimatedDeliveryDistanceKm]);
+
+    const checkoutTotal = useMemo(
+        () => Number((checkoutSubtotal + shippingFee).toFixed(2)),
+        [checkoutSubtotal, shippingFee]
+    );
+
     const createCheckoutPinIcon = (bounce = false) => L.divIcon({
         className: 'checkout-pin-wrap',
         html: `<div class="checkout-pin${bounce ? ' pin-bounce' : ''}">📍</div>`,
@@ -1261,8 +1287,9 @@ export default function CheckoutPage() {
         }
         const originalPhone = String(session.user?.phone || session.user?.seller_profile?.phone || '').replace(/\D/g, '').slice(0, 10);
         const currentPhone = String(customer.phone || '').trim();
-        
-        if (currentPhone.length !== 10 && currentPhone !== originalPhone) {
+        const currentPhoneDigits = currentPhone.replace(/\D/g, '').slice(0, 10);
+
+        if (currentPhoneDigits.length !== 10 && currentPhoneDigits !== originalPhone) {
             mercado.showToast('El telefono debe tener exactamente 10 digitos', 'error');
             return;
         }
@@ -1287,6 +1314,9 @@ export default function CheckoutPage() {
 
         setSubmitting(true);
         try {
+            const orderDistanceKm = isPickup ? 0 : estimatedDeliveryDistanceKm;
+            const orderShippingFee = isPickup ? 0 : Number((DELIVERY_BASE_FEE + (DELIVERY_FEE_PER_KM * orderDistanceKm)).toFixed(2));
+            const orderTotal = Number((activeSubtotal + orderShippingFee).toFixed(2));
             const pickupAddress = selectedPickupPoint
                 ? `Recoger en tienda: ${selectedPickupPoint.name} - ${selectedPickupPoint.location}`
                 : 'Recoger en tienda';
@@ -1303,6 +1333,7 @@ export default function CheckoutPage() {
             const order = await mercado.OrdersAPI.create({
                 customer: {
                     ...customer,
+                    phone: currentPhoneDigits,
                     address: finalAddress,
                 },
                 delivery_location: finalDeliveryLocation,
@@ -1318,7 +1349,10 @@ export default function CheckoutPage() {
                     price: Number(item.product.price || 0),
                     image: item.product.images?.[0] || '',
                 })),
-                total: activeSubtotal,
+                subtotal: activeSubtotal,
+                delivery_distance_km: orderDistanceKm,
+                shipping_fee: orderShippingFee,
+                total: orderTotal,
             });
 
             await mercado.clearCart();
@@ -1402,9 +1436,13 @@ export default function CheckoutPage() {
                     <div className="summary-row"><span>Subtotal</span><strong>{mercado.formatPrice(checkoutSubtotal)}</strong></div>
                     <div className="summary-row">
                         <span>{isPickup ? 'Recogida' : 'Envio'}</span>
-                        <strong>{isPickup ? 'Recoges en tienda' : 'Coordinado con vendedor'}</strong>
+                        <strong>
+                            {isPickup
+                                ? 'Recoges en tienda'
+                                : `${mercado.formatPrice(shippingFee)} (${DELIVERY_BASE_FEE} base + ${DELIVERY_FEE_PER_KM}/km x ${estimatedDeliveryDistanceKm.toFixed(2)} km)`}
+                        </strong>
                     </div>
-                    <div className="summary-row total"><span>Total</span><strong>{mercado.formatPrice(checkoutSubtotal)}</strong></div>
+                    <div className="summary-row total"><span>Total</span><strong>{mercado.formatPrice(checkoutTotal)}</strong></div>
 
                     <form className="checkout-form" onSubmit={submitOrder}>
                         <label className="form-label">Nombre completo</label>

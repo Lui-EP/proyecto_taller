@@ -612,6 +612,10 @@
     color: var(--charcoal-muted);
 }
 
+.selected-image-grid {
+    margin-top: 10px;
+}
+
 .seller-products-error {
     padding: var(--spacing-xl);
 }

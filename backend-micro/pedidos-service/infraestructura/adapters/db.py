@@ -149,8 +149,11 @@ class PedidoApp(Base):
     last_location_at = Column(DateTime, nullable=True)
     guest_token = Column(String(120), nullable=True, index=True)
     note = Column(Text, nullable=True)
-    items_json = Column(Text, nullable=False)
-    total = Column(Float, nullable=False)
+    items_json = Column(Text, nullable=False)
+    subtotal = Column(Float, nullable=False, default=0)
+    shipping_fee = Column(Float, nullable=False, default=0)
+    delivery_distance_km = Column(Float, nullable=False, default=0)
+    total = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -294,6 +297,9 @@ def ensure_pedidos_app_schema() -> None:
         "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS courier_lng DOUBLE PRECISION",
         "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS last_location_at TIMESTAMP",
         "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS guest_token VARCHAR(120)",
+        "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS subtotal DOUBLE PRECISION DEFAULT 0",
+        "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS shipping_fee DOUBLE PRECISION DEFAULT 0",
+        "ALTER TABLE pedidos_app ADD COLUMN IF NOT EXISTS delivery_distance_km DOUBLE PRECISION DEFAULT 0",
     ]
 
     with engine.begin() as conn:
