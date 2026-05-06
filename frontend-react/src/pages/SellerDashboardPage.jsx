@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 import PageLoader from '../components/PageLoader';
@@ -59,6 +59,7 @@ function orderStatusLabel(status) {
 export default function SellerDashboardPage() {
     const session = useSession();
     const navigate = useNavigate();
+    const location = useLocation();
     const mercado = getMercadoLocal();
 
     const fileInputRef = useRef(null);
@@ -123,15 +124,9 @@ export default function SellerDashboardPage() {
     }, [profileForm.location, session.user?.seller_profile?.location]);
 
     useEffect(() => {
-        const applyViewFromHash = () => {
-            const hash = String(window.location.hash || '').toLowerCase();
-            setIsTrackingOnly(hash.includes('seguimiento-pedidos'));
-        };
-
-        applyViewFromHash();
-        window.addEventListener('hashchange', applyViewFromHash);
-        return () => window.removeEventListener('hashchange', applyViewFromHash);
-    }, []);
+        const hash = String(location.hash || window.location.hash || '').toLowerCase();
+        setIsTrackingOnly(hash.includes('seguimiento-pedidos'));
+    }, [location.hash]);
 
     const loadData = useCallback(async () => {
         try {
