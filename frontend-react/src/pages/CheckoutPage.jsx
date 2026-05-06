@@ -100,6 +100,14 @@ const LOCAL_CHIAPAS_OVERRIDES = [
     },
 ];
 
+function formatPhoneMask(value) {
+    const digits = String(value || '').replace(/\D/g, '').slice(0, 10);
+    if (!digits) return '';
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 export default function CheckoutPage() {
     const mercado = useMemo(() => getMercadoLocal(), []);
     const session = useSession();
@@ -888,13 +896,13 @@ export default function CheckoutPage() {
         if (!session.user) return;
         
         const rawPhone = String(session.user.phone || session.user.seller_profile?.phone || '');
-        const cleanPhone = rawPhone.replace(/\D/g, '').slice(0, 10);
+        const maskedPhone = formatPhoneMask(rawPhone);
         
         setCustomer((prev) => ({
             ...prev,
             name: session.user.name || '',
             email: session.user.email || '',
-            phone: cleanPhone,
+            phone: maskedPhone,
         }));
     }, [session.user]);
 
@@ -1452,7 +1460,15 @@ export default function CheckoutPage() {
                         <input className="form-input" type="email" value={customer.email} onChange={(event) => setCustomer((prev) => ({ ...prev, email: event.target.value }))} required />
 
                         <label className="form-label">Telefono</label>
-                        <input className="form-input" type="tel" value={customer.phone} onChange={(event) => setCustomer((prev) => ({ ...prev, phone: event.target.value.replace(/\D/g, '').slice(0, 10) }))} maxLength="10" required />
+                        <input
+                            className="form-input"
+                            type="tel"
+                            value={customer.phone}
+                            onChange={(event) => setCustomer((prev) => ({ ...prev, phone: formatPhoneMask(event.target.value) }))}
+                            maxLength="12"
+                            placeholder="961-123-4567"
+                            required
+                        />
 
                         <label className="form-label">Metodo de entrega</label>
                         <div className="delivery-method-row">
