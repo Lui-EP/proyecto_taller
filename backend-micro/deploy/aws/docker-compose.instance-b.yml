@@ -1,0 +1,79 @@
+services:
+  postgres-micro:
+    image: postgres:16
+    container_name: mercadolocal-postgres-micro
+    restart: unless-stopped
+    env_file:
+      - ./.env.postgres
+    ports:
+      - "${INSTANCE_B_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_micro_data:/var/lib/postgresql/data
+      - ../../sql/crear_bd.sql:/docker-entrypoint-initdb.d/01-crear_bd.sql:ro
+    networks:
+      - mercadolocal-backend-net
+
+  pedidos-service:
+    build:
+      context: ../../pedidos-service
+    container_name: mercadolocal-pedidos-service
+    restart: unless-stopped
+    env_file:
+      - ./.env.pedidos
+    environment:
+      CLIENTES_SERVICE_URL: http://${INSTANCE_A_IP}:${INSTANCE_A_CLIENTES_PORT:-8001}
+    depends_on:
+      - postgres-micro
+    ports:
+      - "${INSTANCE_B_PEDIDOS_PORT:-8002}:8002"
+    networks:
+      - mercadolocal-backend-net
+
+  repartidores-service:
+    build:
+      context: ../../repartidores-service
+    container_name: mercadolocal-repartidores-service
+    restart: unless-stopped
+    env_file:
+      - ./.env.repartidores
+    depends_on:
+      - postgres-micro
+    ports:
+      - "${INSTANCE_B_REPARTIDORES_PORT:-8003}:8003"
+    networks:
+      - mercadolocal-backend-net
+
+  vendedores-service:
+    build:
+      context: ../../vendedores-service
+    container_name: mercadolocal-vendedores-service
+    restart: unless-stopped
+    env_file:
+      - ./.env.vendedores
+    depends_on:
+      - postgres-micro
+    ports:
+      - "${INSTANCE_B_VENDEDORES_PORT:-8004}:8004"
+    networks:
+      - mercadolocal-backend-net
+
+  productos-service:
+    build:
+      context: ../../productos-service
+    container_name: mercadolocal-productos-service
+    restart: unless-stopped
+    env_file:
+      - ./.env.productos
+    depends_on:
+      - postgres-micro
+    ports:
+      - "${INSTANCE_B_PRODUCTOS_PORT:-8005}:8005"
+    networks:
+      - mercadolocal-backend-net
+
+volumes:
+  postgres_micro_data:
+
+networks:
+  mercadolocal-backend-net:
+    driver: bridge

@@ -1,0 +1,58 @@
+services:
+  frontend-react:
+    build:
+      context: ../../../frontend-react
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_CLIENTES_API_URL: ${VITE_CLIENTES_API_URL:-/api/clientes}
+        VITE_PEDIDOS_API_URL: ${VITE_PEDIDOS_API_URL:-/api/pedidos}
+        VITE_LOCATIONIQ_API_KEY: ${VITE_LOCATIONIQ_API_KEY}
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
+        VITE_APP_URL: ${VITE_APP_URL}
+    container_name: mercadolocal-frontend-react
+    restart: unless-stopped
+    depends_on:
+      - api-gateway
+    ports:
+      - "80:80"
+    networks:
+      - mercadolocal-access-net
+
+  clientes-service:
+    build:
+      context: ../../clientes-service
+    container_name: mercadolocal-clientes-service
+    restart: unless-stopped
+    env_file:
+      - ./.env.clientes
+    environment:
+      POSTGRES_HOST: ${INSTANCE_B_IP}
+      POSTGRES_PORT: ${INSTANCE_B_POSTGRES_PORT:-5433}
+      PEDIDOS_SERVICE_URL: http://${INSTANCE_B_IP}:${INSTANCE_B_PEDIDOS_PORT:-8002}
+    ports:
+      - "8001:8001"
+    networks:
+      - mercadolocal-access-net
+
+  api-gateway:
+    build:
+      context: ../../api-gateway
+    container_name: mercadolocal-api-gateway
+    restart: unless-stopped
+    env_file:
+      - ./.env.gateway
+    environment:
+      CLIENTES_SERVICE_URL: http://clientes-service:8001
+      PEDIDOS_SERVICE_URL: http://${INSTANCE_B_IP}:${INSTANCE_B_PEDIDOS_PORT:-8002}
+      REPARTIDORES_SERVICE_URL: http://${INSTANCE_B_IP}:${INSTANCE_B_REPARTIDORES_PORT:-8003}
+      VENDEDORES_SERVICE_URL: http://${INSTANCE_B_IP}:${INSTANCE_B_VENDEDORES_PORT:-8004}
+      PRODUCTOS_SERVICE_URL: http://${INSTANCE_B_IP}:${INSTANCE_B_PRODUCTOS_PORT:-8005}
+    depends_on:
+      - clientes-service
+    networks:
+      - mercadolocal-access-net
+
+networks:
+  mercadolocal-access-net:
+    driver: bridge

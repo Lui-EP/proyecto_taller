@@ -160,3 +160,49 @@ uvicorn infraestructura.api.main:app --host 0.0.0.0 --port 8005 --reload
 - `vendedor@mercadolocal.mx` / `123456`
 - `cliente@mercadolocal.mx` / `123456`
 - `repartidor@mercadolocal.mx` / `123456`
+
+## 9) Despliegue en 2 instancias (AWS)
+
+Se agregaron 2 archivos compose en `backend-micro/deploy/aws`:
+
+- `docker-compose.instance-a.yml` (Acceso)
+  - `frontend-react` (Nginx puerto `80`)
+  - `api-gateway` (interno en `8010`, sin exponer publico)
+  - `clientes-service` (puerto `8001`)
+- `docker-compose.instance-b.yml` (Backend)
+  - `postgres-micro` (puerto `5433`)
+  - `productos-service` (`8005`)
+  - `pedidos-service` (`8002`)
+  - `repartidores-service` (`8003`)
+  - `vendedores-service` (`8004`)
+
+Variables de referencia:
+
+```bash
+cd /mnt/c/Users/luisa/OneDrive/Documents/proyecto_interfaz/backend-micro/deploy/aws
+cp instances.env.example instances.env
+```
+
+### Levantar Instancia B
+
+```bash
+docker compose --env-file instances.env -f docker-compose.instance-b.yml up -d --build
+```
+
+### Levantar Instancia A
+
+```bash
+docker compose --env-file instances.env -f docker-compose.instance-a.yml up -d --build
+```
+
+Nota de arquitectura: estos compose no alteran la arquitectura hexagonal.  
+Cada microservicio conserva separación de:
+
+- `dominio` (lógica de negocio)
+- `aplicacion` (casos de uso)
+- `infraestructura/adapters` (FastAPI, SQLAlchemy, HTTP externo)
+
+Con esta separación, el frontend consume:
+
+- `http://<IP_INSTANCIA_A>/` (web)
+- `http://<IP_INSTANCIA_A>/api/...` (proxy Nginx -> api-gateway -> microservicios)
