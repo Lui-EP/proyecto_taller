@@ -44,12 +44,14 @@ services:
       - ./.env.gateway
     environment:
       CLIENTES_SERVICE_URL: http://clientes-service:8001
-      PEDIDOS_SERVICE_URL: http://${INSTANCE_B_IP}:${INSTANCE_B_PEDIDOS_PORT:-8002}
-      REPARTIDORES_SERVICE_URL: http://${INSTANCE_B_IP}:${INSTANCE_B_REPARTIDORES_PORT:-8003}
-      VENDEDORES_SERVICE_URL: http://${INSTANCE_B_IP}:${INSTANCE_B_VENDEDORES_PORT:-8004}
-      PRODUCTOS_SERVICE_URL: http://${INSTANCE_B_IP}:${INSTANCE_B_PRODUCTOS_PORT:-8005}
+      PEDIDOS_SERVICE_URL: http://${INSTANCE_B_IP}:8002
+      REPARTIDORES_SERVICE_URL: http://${INSTANCE_B_IP}:8003
+      VENDEDORES_SERVICE_URL: http://${INSTANCE_B_IP}:8004
+      PRODUCTOS_SERVICE_URL: http://${INSTANCE_B_IP}:8005
     depends_on:
       - clientes-service
+    ports:
+      - "8010:8010"
     networks:
       - mercadolocal-access-net
 
