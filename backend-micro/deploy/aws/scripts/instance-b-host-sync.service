@@ -1,0 +1,17 @@
+[Unit]
+Description=Sincroniza IP privada de Instancia B en /etc/hosts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=AWS_REGION=us-east-1
+Environment=AWS_PROFILE=default
+Environment=INSTANCE_B_TAG_NAME=mercadolocal-instancia-b
+Environment=INSTANCE_B_HOST_ALIAS=instancia-b
+Environment=ENV_OUTPUT_FILE=/home/ubuntu/proyecto_taller/backend-micro/deploy/aws/instances.env
+ExecStart=/home/ubuntu/proyecto_taller/backend-micro/deploy/aws/scripts/sync-instance-b-host.sh
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target
