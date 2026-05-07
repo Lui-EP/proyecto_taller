@@ -2,7 +2,7 @@
 
 Proyecto: `proyecto_interfaz`
 Fecha de corte: `2026-05-06`
-Ruta analizada: `c:/Users/luisa/OneDrive/Documents/proyecto_interfaz`
+
 
 ## 1) Resumen rapido
 
