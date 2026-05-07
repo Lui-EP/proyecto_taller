@@ -50,15 +50,23 @@ export default function LandingPage() {
         if (withoutTrailing.endsWith('/inicio')) return withoutTrailing;
         return `${withoutTrailing}/inicio`;
     })();
+    const registerUrl = (() => {
+        if (!appUrl) return '/registro';
+        if (appUrl.startsWith('/')) return '/registro';
+        const base = appUrl.replace(/\/inicio\/?$/, '').replace(/\/+$/, '');
+        return `${base}/registro`;
+    })();
 
     return (
         <main className="min-h-screen overflow-hidden bg-gradient-to-b from-[#FBF5EA] via-[#F7EEDC] to-[#EEDFC5] text-[#4B3217]">
             <div className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[420px] bg-[radial-gradient(circle_at_top,#F2DDBA_0%,rgba(242,221,186,0)_68%)]" />
+            <div className="pointer-events-none absolute -left-20 top-24 -z-0 h-64 w-64 rounded-full bg-[#E9CFA2]/50 blur-3xl motion-safe:animate-pulse" />
+            <div className="pointer-events-none absolute -right-16 top-56 -z-0 h-72 w-72 rounded-full bg-[#E1C18D]/45 blur-3xl motion-safe:animate-pulse" />
 
             <section className="relative z-10 mx-auto w-full max-w-6xl px-6 pb-16 pt-16 md:pt-24">
-                <div className="grid items-center gap-8 rounded-[2rem] border border-[#D9BE94] bg-white/80 p-8 shadow-[0_24px_70px_-30px_rgba(168,106,42,0.45)] backdrop-blur md:grid-cols-[1.1fr_0.9fr] md:p-12">
+                <div className="grid items-center gap-8 rounded-[2rem] border border-[#D9BE94] bg-white/80 p-8 shadow-[0_24px_70px_-30px_rgba(168,106,42,0.45)] backdrop-blur transition-all duration-500 hover:shadow-[0_26px_75px_-28px_rgba(168,106,42,0.55)] md:grid-cols-[1.1fr_0.9fr] md:p-12">
                     <div>
-                        <p className="mb-4 inline-flex rounded-full border border-[#D9BE94] bg-[#F8F1E3] px-4 py-1 text-xs font-bold uppercase tracking-[0.2em] text-[#A86A2A]">
+                        <p className="mb-4 inline-flex rounded-full border border-[#D9BE94] bg-[#F8F1E3] px-4 py-1 text-xs font-bold uppercase tracking-[0.2em] text-[#A86A2A] motion-safe:animate-pulse">
                             Plataforma cloud para comercio local
                         </p>
                         <h1 className="max-w-3xl text-balance text-3xl font-black leading-tight text-[#4B3217] md:text-5xl">
@@ -71,8 +79,8 @@ export default function LandingPage() {
 
                         <div className="mt-8 flex flex-wrap items-center gap-4">
                             <a
-                                href={appUrl}
-                                className="inline-flex items-center justify-center rounded-2xl bg-[#A86A2A] px-8 py-4 text-base font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8D571F] hover:shadow-[0_14px_28px_-12px_rgba(141,87,31,0.65)] focus:outline-none focus:ring-2 focus:ring-[#D9BE94]"
+                                href={registerUrl}
+                                className="inline-flex items-center justify-center rounded-2xl bg-[#A86A2A] px-8 py-4 text-base font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#8D571F] hover:shadow-[0_14px_28px_-12px_rgba(141,87,31,0.65)] focus:outline-none focus:ring-2 focus:ring-[#D9BE94] motion-safe:animate-[bounce_2.8s_ease-in-out_infinite]"
                             >
                                 Explorar Plataforma
                             </a>
@@ -85,16 +93,16 @@ export default function LandingPage() {
                                 Ver API Health
                             </a>
                             <span className="rounded-xl border border-[#E7D2AE] bg-[#FCF7EC] px-4 py-2 text-sm text-[#8C6840]">
-                                URL App: <strong className="text-[#6B4A27]">{appUrl}</strong>
+                                Registro directo: <strong className="text-[#6B4A27]">{registerUrl}</strong>
                             </span>
                         </div>
                     </div>
 
-                    <aside className="grid gap-3 rounded-3xl border border-[#E4CFAB] bg-gradient-to-br from-[#FEFAF2] to-[#F2E2C4] p-5">
+                    <aside className="grid gap-3 rounded-3xl border border-[#E4CFAB] bg-gradient-to-br from-[#FEFAF2] to-[#F2E2C4] p-5 transition-all duration-500 hover:-translate-y-1">
                         <h2 className="text-sm font-bold uppercase tracking-[0.18em] text-[#A86A2A]">Resumen técnico</h2>
                         <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-1">
                             {highlights.map((item) => (
-                                <div key={item.label} className="rounded-2xl border border-[#E0C69D] bg-white/75 p-4">
+                                <div key={item.label} className="rounded-2xl border border-[#E0C69D] bg-white/75 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#FFF9EE]">
                                     <p className="text-xs uppercase tracking-wide text-[#9A7A4F]">{item.label}</p>
                                     <p className="mt-1 text-lg font-extrabold text-[#4B3217]">{item.value}</p>
                                 </div>
@@ -118,7 +126,7 @@ export default function LandingPage() {
                             key={service.title}
                             className="group relative overflow-hidden rounded-2xl border border-[#D9BE94] bg-white p-5 shadow-[0_18px_38px_-24px_rgba(168,106,42,0.45)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_24px_40px_-20px_rgba(168,106,42,0.5)]"
                         >
-                            <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${service.tone} text-base font-black text-[#7D4D1B]`}>
+                            <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${service.tone} text-base font-black text-[#7D4D1B] transition-transform duration-300 group-hover:scale-110`}>
                                 {service.short}
                             </div>
                             <h3 className="text-lg font-bold text-[#4B3217]">{service.title}</h3>
