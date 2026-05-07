@@ -22,6 +22,7 @@ services:
       - ./.env.pedidos
     environment:
       CLIENTES_SERVICE_URL: http://${INSTANCE_A_IP}:${INSTANCE_A_CLIENTES_PORT:-8001}
+    command: ["uvicorn", "infraestructura.api.main:app", "--host", "0.0.0.0", "--port", "8002"]
     depends_on:
       - postgres-micro
     ports:
@@ -36,6 +37,7 @@ services:
     restart: unless-stopped
     env_file:
       - ./.env.repartidores
+    command: ["uvicorn", "infraestructura.api.main:app", "--host", "0.0.0.0", "--port", "8003"]
     depends_on:
       - postgres-micro
     ports:
@@ -50,6 +52,7 @@ services:
     restart: unless-stopped
     env_file:
       - ./.env.vendedores
+    command: ["uvicorn", "infraestructura.api.main:app", "--host", "0.0.0.0", "--port", "8004"]
     depends_on:
       - postgres-micro
     ports:
@@ -64,6 +67,7 @@ services:
     restart: unless-stopped
     env_file:
       - ./.env.productos
+    command: ["uvicorn", "infraestructura.api.main:app", "--host", "0.0.0.0", "--port", "8005"]
     depends_on:
       - postgres-micro
     ports:
