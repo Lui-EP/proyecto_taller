@@ -1,7 +1,11 @@
 [Unit]
 Description=Sincroniza IP privada de Instancia B en /etc/hosts
 After=network-online.target
+After=docker.service
+After=nginx.service
 Wants=network-online.target
+Wants=docker.service
+Wants=nginx.service
 
 [Service]
 Type=oneshot
@@ -10,6 +14,10 @@ Environment=AWS_PROFILE=default
 Environment=INSTANCE_B_TAG_NAME=mercadolocal-instancia-b
 Environment=INSTANCE_B_HOST_ALIAS=instancia-b
 Environment=ENV_OUTPUT_FILE=/home/ubuntu/proyecto_taller/backend-micro/deploy/aws/instances.env
+Environment=COMPOSE_DIR=/home/ubuntu/proyecto_taller/backend-micro/deploy/aws
+Environment=COMPOSE_FILE=docker-compose.instance-a.yml
+Environment=COMPOSE_ENV_FILE=instances.env
+Environment=RESTART_ALWAYS=true
 ExecStart=/home/ubuntu/proyecto_taller/backend-micro/deploy/aws/scripts/sync-instance-b-host.sh
 RemainAfterExit=true
 
