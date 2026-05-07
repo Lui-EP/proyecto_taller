@@ -7,9 +7,9 @@ services:
         VITE_API_URL: ${VITE_API_URL:-}
         VITE_CLIENTES_API_URL: ${VITE_CLIENTES_API_URL:-/api/clientes}
         VITE_PEDIDOS_API_URL: ${VITE_PEDIDOS_API_URL:-/api/pedidos}
-        VITE_LOCATIONIQ_API_KEY: ${VITE_LOCATIONIQ_API_KEY}
-        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY}
-        VITE_APP_URL: ${VITE_APP_URL}
+        VITE_LOCATIONIQ_API_KEY: ${VITE_LOCATIONIQ_API_KEY:-}
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
+        VITE_APP_URL: ${VITE_APP_URL:-}
     container_name: mercadolocal-frontend-react
     restart: unless-stopped
     depends_on:
@@ -27,9 +27,9 @@ services:
     env_file:
       - ./.env.clientes
     environment:
-      POSTGRES_HOST: ${INSTANCE_B_IP}
+      POSTGRES_HOST: ${INSTANCE_B_IP:-172.31.35.76}
       POSTGRES_PORT: ${INSTANCE_B_POSTGRES_PORT:-5433}
-      PEDIDOS_SERVICE_URL: http://${INSTANCE_B_IP}:${INSTANCE_B_PEDIDOS_PORT:-8002}
+      PEDIDOS_SERVICE_URL: http://${INSTANCE_B_IP:-172.31.35.76}:${INSTANCE_B_PEDIDOS_PORT:-8002}
     ports:
       - "8001:8001"
     networks:
@@ -45,10 +45,10 @@ services:
     environment:
       ALLOWED_ORIGINS: "*"
       CLIENTES_SERVICE_URL: http://mercadolocal-clientes-service:8001
-      PEDIDOS_SERVICE_URL: http://${INSTANCE_B_IP}:8002
-      REPARTIDORES_SERVICE_URL: http://${INSTANCE_B_IP}:8003
-      VENDEDORES_SERVICE_URL: http://${INSTANCE_B_IP}:8004
-      PRODUCTOS_SERVICE_URL: http://${INSTANCE_B_IP}:8005
+      PEDIDOS_SERVICE_URL: http://${INSTANCE_B_IP:-172.31.35.76}:8002
+      REPARTIDORES_SERVICE_URL: http://${INSTANCE_B_IP:-172.31.35.76}:8003
+      VENDEDORES_SERVICE_URL: http://${INSTANCE_B_IP:-172.31.35.76}:8004
+      PRODUCTOS_SERVICE_URL: http://${INSTANCE_B_IP:-172.31.35.76}:8005
       HTTP_TIMEOUT_SECONDS: "30"
     depends_on:
       - clientes-service
