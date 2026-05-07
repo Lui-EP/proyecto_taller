@@ -43,11 +43,13 @@ services:
     env_file:
       - ./.env.gateway
     environment:
-      CLIENTES_SERVICE_URL: http://clientes-service:8001
+      ALLOWED_ORIGINS: "*"
+      CLIENTES_SERVICE_URL: http://mercadolocal-clientes-service:8001
       PEDIDOS_SERVICE_URL: http://${INSTANCE_B_IP}:8002
       REPARTIDORES_SERVICE_URL: http://${INSTANCE_B_IP}:8003
       VENDEDORES_SERVICE_URL: http://${INSTANCE_B_IP}:8004
       PRODUCTOS_SERVICE_URL: http://${INSTANCE_B_IP}:8005
+      HTTP_TIMEOUT_SECONDS: "30"
     depends_on:
       - clientes-service
     ports:
