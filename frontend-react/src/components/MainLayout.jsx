@@ -242,8 +242,10 @@ export default function MainLayout({ children }) {
             <header className="header react-header">
                 <div className="container header-container">
                     <Link to="/inicio" className="logo" onClick={closeMobileMenu}>
-                        <div className="logo-icon">🌾</div>
-                        <span className="logo-text">MercadoLocal</span>
+                        <div className="logo-icon">
+                            <img src="/img/logo-jaguar.png" alt="JAGUARYU" className="logo-mark-image" />
+                        </div>
+                        <span className="logo-text">JAGUARYU</span>
                         <span className="logo-mobile-client">{mobileClientName}</span>
                     </Link>
 

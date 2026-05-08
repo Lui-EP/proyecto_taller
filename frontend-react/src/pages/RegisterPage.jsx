@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import SplitText from '../components/SplitText';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 
@@ -104,8 +105,10 @@ export default function RegisterPage() {
 
                 <div className="auth-card">
                     <div className="auth-header">
-                        <div className="auth-logo">🌾</div>
-                        <h1 className="auth-title">Crear cuenta</h1>
+                        <div className="auth-logo">
+                            <img src="/img/logo-jaguar.png" alt="JAGUARYU" className="auth-logo-image" />
+                        </div>
+                        <SplitText as="h1" text="Crear cuenta" className="auth-title" delay={30} stagger={26} />
                         <p className="auth-subtitle">Unete a nuestra comunidad</p>
                     </div>
 

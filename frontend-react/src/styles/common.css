@@ -428,20 +428,29 @@ h1, h2, h3, h4, h5, h6, p, span, a, button, label, strong, small {
 }
 
 .logo-icon {
-    width: 40px;
-    height: 40px;
-    background-color: var(--terracotta);
-    border-radius: var(--radius-full);
+    width: 46px;
+    height: 46px;
+    background-color: rgba(255, 255, 255, 0.96);
+    border: 1px solid var(--sand);
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--white);
+    overflow: hidden;
+}
+
+.logo-mark-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 3px;
 }
 
 .logo-text {
     font-family: var(--font-heading);
-    font-weight: 700;
-    font-size: 1.25rem;
+    font-weight: 800;
+    font-size: 1.2rem;
+    letter-spacing: 0.02em;
     color: var(--charcoal);
 }
 

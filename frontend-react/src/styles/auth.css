@@ -44,16 +44,22 @@
 }
 
 .auth-logo {
-    width: 64px;
-    height: 64px;
-    background-color: var(--terracotta);
-    border-radius: var(--radius-full);
+    width: 84px;
+    height: 84px;
+    background-color: #fff;
+    border: 1px solid var(--sand);
+    border-radius: 18px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto var(--spacing-md);
-    color: var(--white);
-    font-size: 1.5rem;
+    overflow: hidden;
+}
+
+.auth-logo-image {
+    width: 92%;
+    height: 92%;
+    object-fit: contain;
 }
 
 .auth-title {

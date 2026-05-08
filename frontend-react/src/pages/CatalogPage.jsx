@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
+import SplitText from '../components/SplitText';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 
 const DEFAULT_FILTERS = {
@@ -334,7 +335,7 @@ export default function CatalogPage() {
                 </section>
 
                 <div className="catalog-header">
-                    <h1 className="catalog-title">Catálogo de productos</h1>
+                    <SplitText as="h1" text="Catálogo de productos" className="catalog-title" delay={20} stagger={20} />
                     <p className="catalog-description">Compra local con información clara de stock y vendedor.</p>
                 </div>
 

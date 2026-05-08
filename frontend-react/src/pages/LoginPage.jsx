@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import SplitText from '../components/SplitText';
 import { useSession } from '../context/SessionContext';
 import { getMercadoLocal } from '../lib/mercadoLocal';
 
@@ -50,8 +51,10 @@ export default function LoginPage() {
 
                 <div className="auth-card">
                     <div className="auth-header">
-                        <div className="auth-logo">🌾</div>
-                        <h1 className="auth-title">Bienvenido de nuevo</h1>
+                        <div className="auth-logo">
+                            <img src="/img/logo-jaguar.png" alt="JAGUARYU" className="auth-logo-image" />
+                        </div>
+                        <SplitText as="h1" text="Bienvenido de nuevo" className="auth-title" delay={30} stagger={26} />
                         <p className="auth-subtitle">Ingresa a tu cuenta para continuar</p>
                     </div>
 
