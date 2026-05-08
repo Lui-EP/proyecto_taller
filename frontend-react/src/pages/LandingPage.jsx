@@ -75,9 +75,15 @@ export default function LandingPage() {
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
             <img
+              src="/img/logo-jaguar.png"
+              alt="Logo Jaguar"
+              className="h-11 w-11 rounded-full border border-[#D9BE94] bg-[#FFF8EC] object-contain p-1"
+              loading="eager"
+            />
+            <img
               src="/img/logo-jaguaryu.png"
               alt="JAGUARYU"
-              className="h-12 w-auto max-w-[220px] object-contain"
+              className="h-12 w-auto max-w-[240px] object-contain"
               loading="eager"
             />
           </div>
