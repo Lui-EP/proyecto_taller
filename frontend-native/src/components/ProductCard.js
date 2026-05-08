@@ -25,7 +25,10 @@ export default function ProductCard({ product, onPress, onAddToCart, compact = f
           <Ionicons name="star" size={14} color={colors.warning} />
           <Text style={styles.meta}>{product.rating.toFixed(1)}</Text>
         </View>
-        <Text style={styles.seller}>{product.sellerName}</Text>
+        <View style={styles.sellerRow}>
+          <Ionicons name="storefront-outline" size={14} color={colors.textSoft} />
+          <Text style={styles.seller} numberOfLines={1}>{product.sellerName}</Text>
+        </View>
         {onAddToCart ? (
           <Pressable style={[styles.button, dense && styles.denseButton, outOfStock && styles.buttonDisabled]} onPress={onAddToCart} disabled={outOfStock}>
             <Text style={[styles.buttonText, dense && styles.denseButtonText]}>{outOfStock ? 'Agotado' : 'Agregar'}</Text>
@@ -70,11 +73,11 @@ const styles = StyleSheet.create({
   },
   image: {
     width: '100%',
-    height: 184,
+    height: 178,
     backgroundColor: colors.surfaceMuted,
   },
   compactImage: {
-    height: 170,
+    height: 166,
   },
   denseImage: {
     height: 148,
@@ -136,6 +139,12 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: typography.caption,
     fontWeight: '700',
+  },
+  sellerRow: {
+    marginTop: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   badge: {
     paddingHorizontal: spacing.sm,

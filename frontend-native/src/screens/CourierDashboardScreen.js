@@ -147,7 +147,7 @@ export default function CourierDashboardScreen({ navigation }) {
       key: 'courier',
       lat: courierCoords.lat,
       lng: courierCoords.lng,
-      title: 'Tu ubicaciÃ³n',
+      title: 'Tu ubicación',
       description: user?.name || 'Repartidor',
       pinColor: colors.accent,
     } : null,
@@ -234,7 +234,7 @@ export default function CourierDashboardScreen({ navigation }) {
   const ensureLocation = async () => {
     const coords = courierCoords || await requestCurrentLocation();
     if (!coords) {
-      Alert.alert('UbicaciÃ³n obligatoria', 'Para repartir necesitamos tu ubicaciÃ³n activa.');
+      Alert.alert('Ubicación obligatoria', 'Para repartir necesitamos tu ubicación activa.');
       return null;
     }
     return coords;
@@ -306,12 +306,12 @@ export default function CourierDashboardScreen({ navigation }) {
     try {
       const canOpen = await Linking.canOpenURL(targetUrl);
       if (!canOpen) {
-        Alert.alert('Navegacion', 'No se pudo abrir la app de navegacion.');
+        Alert.alert('Navegación', 'No se pudo abrir la app de navegación.');
         return;
       }
       await Linking.openURL(targetUrl);
     } catch {
-      Alert.alert('Navegacion', 'No se pudo abrir la ruta externa.');
+      Alert.alert('Navegación', 'No se pudo abrir la ruta externa.');
     }
   };
 
@@ -321,11 +321,11 @@ export default function CourierDashboardScreen({ navigation }) {
   };
 
   const locationStatusText = permissionStatus === 'granted'
-    ? 'UbicaciÃ³n activa'
+    ? 'Ubicación activa'
     : permissionStatus === 'denied'
-      ? 'UbicaciÃ³n denegada'
+      ? 'Ubicación denegada'
       : permissionStatus === 'error'
-        ? 'No se pudo leer ubicaciÃ³n'
+        ? 'No se pudo leer ubicación'
         : 'Pendiente por activar';
 
   return (
@@ -335,7 +335,7 @@ export default function CourierDashboardScreen({ navigation }) {
           <Text style={styles.eyebrow}>Repartidor</Text>
           <Text style={styles.title}>Rutas y pedidos desde el celular</Text>
           <Text style={styles.subtitle}>
-            La app ya calcula cercanÃ­a, comparte tu posiciÃ³n y deja visible la ruta del pedido para el cliente.
+            La app ya calcula cercanía, comparte tu posición y deja visible la ruta del pedido para el cliente.
           </Text>
 
           <View style={styles.heroActions}>
@@ -343,7 +343,7 @@ export default function CourierDashboardScreen({ navigation }) {
               <Text style={styles.secondaryActionText}>{isRefreshing ? 'Actualizando...' : 'Actualizar'}</Text>
             </MotionPressable>
             <MotionPressable style={styles.secondaryAction} onPress={handleLogout}>
-              <Text style={styles.secondaryActionText}>Cerrar sesiÃ³n</Text>
+              <Text style={styles.secondaryActionText}>Cerrar sesión</Text>
             </MotionPressable>
           </View>
 
@@ -354,7 +354,7 @@ export default function CourierDashboardScreen({ navigation }) {
 
           <View style={styles.metricsRow}>
             <MetricCard icon="flash-outline" value={`${availableOrders.length}`} label="libres" />
-            <MetricCard icon="navigate-outline" value={`${myOrders.length}`} label="mÃ­os" />
+            <MetricCard icon="navigate-outline" value={`${myOrders.length}`} label="míos" />
             <MetricCard icon="checkmark-circle-outline" value={`${deliveredCount}`} label="cerrados" />
           </View>
         </LinearGradient>
@@ -382,8 +382,8 @@ export default function CourierDashboardScreen({ navigation }) {
           <Text style={styles.sectionTitle}>{activeTab === 'available' ? 'Pedidos para tomar' : 'Pedidos en curso'}</Text>
           <Text style={styles.sectionHelper}>
             {activeTab === 'available'
-              ? 'Ya vienen ordenados por cercanÃ­a para que escojas rÃ¡pido el mejor.'
-              : 'AquÃ­ controlas el viaje y la app comparte tu ubicaciÃ³n con el cliente.'}
+              ? 'Ya vienen ordenados por cercanía para que escojas rápido el mejor.'
+              : 'Aquí controlas el viaje y la app comparte tu ubicación con el cliente.'}
           </Text>
           {currentList.length ? currentList.map((order) => (
             <OrderCard
@@ -406,7 +406,7 @@ export default function CourierDashboardScreen({ navigation }) {
               {ready
                 ? activeTab === 'available'
                   ? 'No hay pedidos libres por ahora.'
-                  : 'TodavÃ­a no tienes pedidos asignados.'
+                  : 'Todavía no tienes pedidos asignados.'
                 : 'Cargando pedidos...'}
             </Text>
           )}
@@ -453,7 +453,7 @@ export default function CourierDashboardScreen({ navigation }) {
                       </Text>
                     </MotionPressable>
                     <MotionPressable style={styles.secondaryButton} onPress={handleShareNow}>
-                      <Text style={styles.secondaryButtonText}>Compartir ubicaciÃ³n</Text>
+                      <Text style={styles.secondaryButtonText}>Compartir ubicación</Text>
                     </MotionPressable>
                     <MotionPressable style={styles.secondaryButton} onPress={() => openExternalRoute('google')}>
                       <Text style={styles.secondaryButtonText}>Abrir Google Maps</Text>
@@ -480,8 +480,8 @@ export default function CourierDashboardScreen({ navigation }) {
                 initialRegion={mapRegion}
                 helperText={
                   permissionStatus === 'granted'
-                    ? 'Mientras el permiso siga activo, tu ubicaciÃ³n se envÃ­a al pedido que estÃ¡s llevando.'
-                    : 'Activa la ubicaciÃ³n para que el cliente pueda verte en el mapa.'
+                    ? 'Mientras el permiso siga activo, tu ubicación se envía al pedido que estás llevando.'
+                    : 'Activa la ubicación para que el cliente pueda verte en el mapa.'
                 }
               />
             </View>
@@ -792,4 +792,6 @@ const styles = StyleSheet.create({
     color: colors.textSoft,
   },
 });
+
+
 

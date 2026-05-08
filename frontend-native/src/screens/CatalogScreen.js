@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ProductCard from '../components/ProductCard';
@@ -67,6 +67,21 @@ export default function CatalogScreen({ navigation, route }) {
     });
   }, [activeFlags, products, search, selectedCategory, sortBy]);
 
+  const activeFilterCount = useMemo(() => {
+    const flagCount = Object.values(activeFlags).filter(Boolean).length;
+    const categoryCount = selectedCategory === 'all' ? 0 : 1;
+    const searchCount = search.trim() ? 1 : 0;
+    return flagCount + categoryCount + searchCount;
+  }, [activeFlags, search, selectedCategory]);
+
+  const clearFilters = useCallback(() => {
+    hapticSelection();
+    setSearch('');
+    setSelectedCategory('all');
+    setActiveFlags({ featured: false, local: false, verified: false, lowStock: false });
+    setSortBy('featured');
+  }, []);
+
   const toggleFlag = (key) => {
     hapticSelection();
     setActiveFlags((current) => ({ ...current, [key]: !current[key] }));
@@ -86,9 +101,9 @@ export default function CatalogScreen({ navigation, route }) {
       {!ready ? <SkeletonList count={4} /> : null}
       {ready ? (
         <>
-          <View>
+          <View style={styles.heroCard}>
             <Text style={styles.title}>Catálogo móvil</Text>
-            <Text style={styles.subtitle}>Ya puedes filtrar mejor y explorar con una presentación más cercana a una app comercial.</Text>
+            <Text style={styles.subtitle}>Explora productos en tiempo real y filtra rápido por categoría, precio y disponibilidad.</Text>
             <View style={styles.searchWrap}>
               <Ionicons name="search-outline" size={18} color={colors.textSoft} />
               <TextInput
@@ -98,6 +113,21 @@ export default function CatalogScreen({ navigation, route }) {
                 placeholderTextColor={colors.textMuted}
                 style={styles.search}
               />
+            </View>
+            <View style={styles.heroMetaRow}>
+              <View style={styles.metaPill}>
+                <Ionicons name="layers-outline" size={14} color={colors.primaryDark} />
+                <Text style={styles.metaPillText}>{filtered.length} visibles</Text>
+              </View>
+              <View style={styles.metaPill}>
+                <Ionicons name="funnel-outline" size={14} color={colors.primaryDark} />
+                <Text style={styles.metaPillText}>{activeFilterCount} filtros activos</Text>
+              </View>
+              {activeFilterCount ? (
+                <MotionPressable style={styles.clearChip} onPress={clearFilters}>
+                  <Text style={styles.clearChipText}>Limpiar</Text>
+                </MotionPressable>
+              ) : null}
             </View>
           </View>
 
@@ -197,10 +227,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: colors.text,
   },
+  heroCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadows.soft,
+  },
   subtitle: {
     color: colors.textSoft,
     marginTop: 6,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     lineHeight: 20,
   },
   searchWrap: {
@@ -218,6 +256,42 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.sm,
     color: colors.text,
+  },
+  heroMetaRow: {
+    marginTop: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  metaPill: {
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#fff3df',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaPillText: {
+    color: colors.primaryDark,
+    fontSize: typography.caption,
+    fontWeight: '700',
+  },
+  clearChip: {
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+  },
+  clearChipText: {
+    color: colors.primaryDark,
+    fontSize: typography.caption,
+    fontWeight: '800',
   },
   sectionBlock: {
     marginTop: spacing.lg,

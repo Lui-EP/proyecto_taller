@@ -70,7 +70,7 @@ export function SessionProvider({ children }) {
     const result = await loginRequest(cleanEmail, cleanPassword);
     const normalized = normalizeUser(result?.user || null);
     const nextToken = `${result?.token || ''}`.trim();
-    if (!nextToken) throw new Error('No se recibio token de sesión');
+    if (!nextToken) throw new Error('No se recibió token de sesión');
     setAuthToken(nextToken);
     setUser(normalized);
     setToken(nextToken);
@@ -81,7 +81,7 @@ export function SessionProvider({ children }) {
     const result = await registerRequest(payload);
     const normalized = normalizeUser(result?.user || null);
     const nextToken = `${result?.token || ''}`.trim();
-    if (!nextToken) throw new Error('No se recibio token de sesión tras registro');
+    if (!nextToken) throw new Error('No se recibió token de sesión tras registro');
     setAuthToken(nextToken);
     setUser(normalized);
     setToken(nextToken);
@@ -91,7 +91,7 @@ export function SessionProvider({ children }) {
   const loginAsRole = async (role) => {
     const found = users.find((item) => item.role === role);
     if (!found) throw new Error('Rol no disponible');
-    throw new Error('Seleccion de rol deshabilitada: inicia sesion con correo y contraseña reales.');
+    throw new Error('Selección de rol deshabilitada: inicia sesión con correo y contraseña reales.');
   };
 
   const logout = async () => {

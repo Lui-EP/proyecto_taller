@@ -3,6 +3,7 @@ import {
   createProduct as createProductApi,
   listCategories as listCategoriesApi,
   listProducts,
+  resolveRemoteAssetUrl,
   updateProduct as updateProductApi,
 } from '../lib/productsApi';
 
@@ -32,7 +33,7 @@ function buildPlaceholder(name = 'Producto') {
 
 function inferImage(rawProduct = {}) {
   const direct = String(rawProduct.imageData || rawProduct.image || rawProduct.image_url || rawProduct.imageUrl || '').trim();
-  if (direct) return { uri: direct };
+  if (direct) return { uri: resolveRemoteAssetUrl(direct) || direct };
   return { uri: buildPlaceholder(rawProduct.name || 'Producto') };
 }
 

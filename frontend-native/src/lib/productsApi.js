@@ -1,4 +1,4 @@
-﻿import { buildAuthHeaders } from './httpAuth';
+import { buildAuthHeaders } from './httpAuth';
 
 const rawClientesApi = `${process.env.EXPO_PUBLIC_CLIENTES_API_URL || ''}`.trim();
 
@@ -9,7 +9,32 @@ export function getClientesApiBaseUrl() {
   if (rawClientesApi.includes('tu-dominio.com')) {
     throw new Error('Configura EXPO_PUBLIC_CLIENTES_API_URL con tu URL real de backend');
   }
+  if (/localhost|127\.0\.0\.1/i.test(rawClientesApi)) {
+    throw new Error('EXPO_PUBLIC_CLIENTES_API_URL no puede usar localhost/127.0.0.1 en móvil');
+  }
   return rawClientesApi.replace(/\/$/, '');
+}
+
+function getClientesApiOrigin() {
+  const baseUrl = getClientesApiBaseUrl();
+  try {
+    return new URL(baseUrl).origin;
+  } catch {
+    return '';
+  }
+}
+
+export function resolveRemoteAssetUrl(assetPath = '') {
+  const value = String(assetPath || '').trim();
+  if (!value) return '';
+  if (value.startsWith('data:')) return value;
+  if (/^https?:\/\//i.test(value)) return value;
+
+  const origin = getClientesApiOrigin();
+  if (!origin) return value;
+  if (value.startsWith('//')) return `https:${value}`;
+  if (value.startsWith('/')) return `${origin}${value}`;
+  return `${origin}/${value}`;
 }
 
 async function request(path, options = {}) {
@@ -103,5 +128,3 @@ export async function listSellerActiveCarts(sellerId) {
   const json = await request(`/seller/carts/active?seller_id=${encodeURIComponent(sellerId)}`);
   return json.carts || [];
 }
-
-

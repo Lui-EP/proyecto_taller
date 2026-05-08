@@ -1,4 +1,4 @@
-﻿import { buildAuthHeaders } from './httpAuth';
+import { buildAuthHeaders } from './httpAuth';
 
 const rawPedidosApi = `${process.env.EXPO_PUBLIC_PEDIDOS_API_URL || ''}`.trim();
 
@@ -8,6 +8,9 @@ export function getPedidosApiBaseUrl() {
   }
   if (rawPedidosApi.includes('tu-dominio.com')) {
     throw new Error('Configura EXPO_PUBLIC_PEDIDOS_API_URL con tu URL real de backend');
+  }
+  if (/localhost|127\.0\.0\.1/i.test(rawPedidosApi)) {
+    throw new Error('EXPO_PUBLIC_PEDIDOS_API_URL no puede usar localhost/127.0.0.1 en móvil');
   }
   return rawPedidosApi.replace(/\/$/, '');
 }

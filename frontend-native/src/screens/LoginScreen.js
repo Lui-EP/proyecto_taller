@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, View, ScrollView } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenContainer from '../components/ScreenContainer';
 import FadeInView from '../components/FadeInView';
@@ -15,7 +15,6 @@ export default function LoginScreen({ navigation, isEmbedded = false }) {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('buyer');
-
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -50,12 +49,16 @@ export default function LoginScreen({ navigation, isEmbedded = false }) {
     <ScreenContainer>
       <ScrollView contentContainerStyle={styles.scroll}>
         <FadeInView>
-          <Text style={styles.title}>{isLogin ? 'Iniciar Sesión' : 'Crear Cuenta'}</Text>
+          <Text style={styles.title}>{isLogin ? 'Iniciar sesión' : 'Crear cuenta'}</Text>
           <Text style={styles.subtitle}>
             {isLogin
               ? 'Ingresa tus datos para continuar.'
               : 'Únete para comprar o vender productos locales.'}
           </Text>
+          <View style={styles.remoteBadge}>
+            <Ionicons name="cloud-done-outline" size={15} color={colors.primaryDark} />
+            <Text style={styles.remoteBadgeText}>Acceso conectado por API</Text>
+          </View>
         </FadeInView>
 
         <FadeInView delay={70}>
@@ -158,8 +161,26 @@ const styles = StyleSheet.create({
   subtitle: {
     color: colors.textSoft,
     marginTop: 6,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.sm,
     lineHeight: 20,
+  },
+  remoteBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: '#fff2de',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: spacing.lg,
+  },
+  remoteBadgeText: {
+    color: colors.primaryDark,
+    fontWeight: '700',
+    fontSize: typography.caption,
   },
   card: {
     backgroundColor: colors.surface,
